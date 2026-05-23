@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sortEntries, topEntries, qualifies, highScore, type RunResult } from "./ranking";
+import { sortEntries, topEntries, qualifies, highScore, topName, type RunResult } from "./ranking";
 import { LEADERBOARD_SIZE } from "../config";
 
 const win = (name: string, score: number, timeMs: number): RunResult => ({
@@ -71,5 +71,15 @@ describe("ranking — highScore", () => {
   it("is zero for an empty list and the max score otherwise", () => {
     expect(highScore([])).toBe(0);
     expect(highScore([win("A", 700, 70_000), loss("B", 1200)])).toBe(1200);
+  });
+});
+
+describe("ranking — topName", () => {
+  it("is empty for an empty list", () => {
+    expect(topName([])).toBe("");
+  });
+
+  it("returns the name of the #1 entry (win beats higher-scoring loss)", () => {
+    expect(topName([loss("LOSER", 5000), win("ADMIN", 800, 70_000)])).toBe("ADMIN");
   });
 });

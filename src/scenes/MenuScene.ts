@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
-import { highScore, topEntries, type RunResult } from "../systems/ranking";
+import { topName, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores } from "../systems/scoreApi";
 import { MusicController } from "../systems/MusicController";
 
@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
     this.marquee = undefined;
 
     this.highText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "HIGH SCORE: —", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "BEST FIREWALL ADMIN: —", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: COLOR_HEX.green,
@@ -95,7 +95,7 @@ export class MenuScene extends Phaser.Scene {
     } catch {
       return; // brak sieci → HIGH SCORE zostaje „—", brak paska
     }
-    this.highText.setText(`HIGH SCORE: ${highScore(list)}`);
+    this.highText.setText(`BEST FIREWALL ADMIN: ${topName(list) || "—"}`);
 
     const top = topEntries(list);
     if (top.length === 0) return;

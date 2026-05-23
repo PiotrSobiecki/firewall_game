@@ -51,3 +51,8 @@ export function qualifies(
 export function highScore(list: RunResult[]): number {
   return list.reduce((max, e) => Math.max(max, e.score), 0);
 }
+
+/** Nick lidera (1. miejsce wg reguły rankingu); "" dla pustej listy. */
+export function topName(list: RunResult[]): string {
+  return sortEntries(list)[0]?.name ?? "";
+}
