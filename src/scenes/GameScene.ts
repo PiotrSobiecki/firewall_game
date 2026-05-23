@@ -28,6 +28,7 @@ import type { EnemyType, PowerUpType } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { HUD } from "../ui/HUD";
 import { MusicController } from "../systems/MusicController";
+import { Sfx } from "../systems/Sfx";
 import { followDrive } from "../systems/TouchMove";
 import type { EndData } from "./EndScene";
 
@@ -57,6 +58,12 @@ export class GameScene extends Phaser.Scene {
   private bossSpawned = false;
   /** Czy mini-boss został już zaliczony (niezależnie od referencji this.boss). */
   private bossDefeatCommitted = false;
+  /**
+   * Boss oznaczony do zabicia. NIE niszczymy go w callbacku kolizji (onBossShot)
+   * — to footgun Phasera (destroy w trakcie iteracji świata fizyki zostawia
+   * pasek i przerywa killBoss). Faktyczny ubój robimy w bezpiecznym update().
+   */
+  private bossKillPending = false;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"up" | "down" | "left" | "right", Phaser.Input.Keyboard.Key>;
@@ -67,6 +74,8 @@ export class GameScene extends Phaser.Scene {
   private ended = false;
 
   private music!: MusicController;
+  private sfx!: Sfx;
+  private shieldWasActive = false; // do wykrycia zbocza: SFX tylko przy WŁĄCZENIU
   private paused = false;
   private pausedAt = 0;
   private pausedTotal = 0; // łączny czas pauz — odejmowany od elapsed (uczciwy timeout)
@@ -127,6 +136,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.bossSpawned = false;
     this.bossDefeatCommitted = false;
+    this.bossKillPending = false;
 
     this.burst = this.add.particles(0, 0, TEXTURE.particle, {
       speed: { min: 50, max: 200 },
@@ -157,6 +167,8 @@ export class GameScene extends Phaser.Scene {
     // M włącza/wyłącza muzykę, P pauzuje/wznawia.
     this.music = new MusicController(this);
     this.music.start();
+    this.sfx = new Sfx(this);
+    this.shieldWasActive = false;
     kb.on("keydown-M", () => this.music.toggle());
     kb.on("keydown-P", () => this.togglePause());
 
@@ -259,6 +271,9 @@ export class GameScene extends Phaser.Scene {
       this.onKill(enemy),
     );
     this.hud.setEnergy(this.shield.energyRatio, this.shield.isExhausted);
+    // SFX tylko przy WŁĄCZENIU tarczy (zbocze narastające), nie co klatkę
+    if (this.shield.isActive && !this.shieldWasActive) this.sfx.shieldOn();
+    this.shieldWasActive = this.shield.isActive;
 
     // PacketStream: auto-fire w górę (jedyny tryb strzału)
     if (this.powerups.isActive("packetStream", time) && time >= this.nextShotAt) {
@@ -296,6 +311,11 @@ export class GameScene extends Phaser.Scene {
     if (this.boss && this.boss.active) {
       this.boss.behave(time, (bx, by, vx) => this.fireBullet(bx, by, vx));
       this.damageBossWithShield(time);
+    }
+    // Ubój bossa wykonujemy TU (poza callbackiem kolizji) — bezpieczny destroy.
+    if (this.bossKillPending) {
+      this.bossKillPending = false;
+      this.killBoss();
     }
 
     // czas, combo i warunki końca zależne od wyniku/czasu (win / timeout)
@@ -338,6 +358,7 @@ export class GameScene extends Phaser.Scene {
 
   /** Eliminacja wroga (tarcza lub strzał) → punkty (z combo) + efekty + drop. */
   private onKill(enemy: Enemy): void {
+    this.sfx.enemyDeath();
     const pts = this.score.addKill(enemy.type, this.time.now);
     this.hud.setScore(this.score.score);
     this.registerPostBossPoints(pts);
@@ -360,6 +381,7 @@ export class GameScene extends Phaser.Scene {
     shot.disableBody(true, true);
     this.burst.explode(4, shot.x, shot.y);
     if (enemy.takeShot()) {
+      this.sfx.enemyDeath();
       this.burst.explode(14, enemy.x, enemy.y);
       enemy.disableBody(true, true);
       const pts = this.score.addKill(enemy.type, this.time.now);
@@ -445,7 +467,7 @@ export class GameScene extends Phaser.Scene {
     // Zasięg do POWIERZCHNI bossa (łuk tarczy o promień jego ciała), inaczej
     // trafienie wymagało wejścia w bossa (i oberwania obrażeniami kontaktowymi).
     if (Math.hypot(dx, dy) > this.shield.currentRadius + this.boss.bodyRadius) return;
-    if (this.boss.hitByShield(now, this.shield.hitPower)) this.killBoss();
+    if (this.boss.hitByShield(now, this.shield.hitPower)) this.bossKillPending = true;
   }
 
   private onBossContact(): void {
@@ -458,7 +480,7 @@ export class GameScene extends Phaser.Scene {
     if (this.ended || !shot.active || !this.boss?.active) return;
     shot.disableBody(true, true);
     this.burst.explode(4, shot.x, shot.y);
-    if (this.boss.takeShot()) this.killBoss();
+    if (this.boss.takeShot()) this.bossKillPending = true;
   }
 
   /** Pokonanie mini-bossa → bonus, licznik PO BOSSIE 0/100, efekty. */
@@ -480,6 +502,7 @@ export class GameScene extends Phaser.Scene {
     this.hud.setObjective(this.score.score, true, 0);
     this.hud.flashBossDefeated();
 
+    this.sfx.bossDefeated();
     this.burst.explode(48, bx, by);
     this.cameras.main.shake(260, 0.014);
     this.cameras.main.flash(180, 255, 0, 170);

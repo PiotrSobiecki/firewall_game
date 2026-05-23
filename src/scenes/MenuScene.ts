@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BUILD_TAG, COLOR_HEX, GAME_WIDTH, GAME_HEIGHT } from "../config";
+import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { highScore, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores } from "../systems/scoreApi";
@@ -74,14 +74,6 @@ export class MenuScene extends Phaser.Scene {
         { fontFamily: "monospace", fontSize: "11px", color: COLOR_HEX.yellow },
       )
       .setOrigin(0.5);
-
-    this.add
-      .text(GAME_WIDTH - 8, GAME_HEIGHT - 8, BUILD_TAG, {
-        fontFamily: "monospace",
-        fontSize: "9px",
-        color: COLOR_HEX.cyan,
-      })
-      .setOrigin(1, 1);
 
     // START to gest użytkownika → tu odpalamy utwór (potem leci przez grę).
     const begin = () => {

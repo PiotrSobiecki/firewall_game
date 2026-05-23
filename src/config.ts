@@ -15,9 +15,6 @@ export const TARGET_SCORE = 900;
 /** Ile pkt zdobyć po pokonaniu mini-bossa, żeby wygrać rundę. */
 export const WIN_SCORE_AFTER_MINI_BOSS = 100;
 
-/** Wersja buildu (widać w menu — sprawdź, czy masz aktualny front). */
-export const BUILD_TAG = "2026-05-23-boss-reach";
-
 /** Twardy limit sesji: 2 pętle utworu „Firewall" (3:15) = 6:30. */
 export const SESSION_MAX_MS = 6 * 60 * 1000 + 30 * 1000;
 
@@ -71,6 +68,7 @@ export const YOUTUBE_URL = "https://www.youtube.com/watch?v=fiKG2Yb9goc";
 export const AUDIO = {
   trackFile: "firewall.mp3",
   musicVolume: 0.6,
+  sfxVolume: 0.5, // głośność proceduralnych efektów (tarcza, zniszczenia)
 } as const;
 
 /** Rozdzielczość logiczna (portrait jak mobile shmup). */
