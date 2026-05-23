@@ -1,13 +1,10 @@
 /**
  * Czysta logika przebiegu rundy (testowalna bez Phasera).
  * Trzyma życia i wyznacza stan końcowy + powód:
- *  - win     — pokonano bossa, a POTEM zdobyto WIN_SCORE_AFTER_BOSS pkt ponad
- *              wynik z chwili jego pokonania (bez bossa wygrać się nie da),
+ *  - win     — pokonano bossa, potem zdobyto WIN_SCORE_AFTER_BOSS pkt z gry
+ *              (zabójstwa, bonus fali; bonus za bossa się nie liczy),
  *  - death   — utracono ostatnie życie,
  *  - timeout — przekroczono twardy limit czasu (SESSION_MAX_MS).
- *
- * Czas i wynik są przekazywane z zewnątrz (GameScene); respawn NIE zmienia
- * czasu — kontroler nie ma żadnego wpływu na upływ czasu (PRD #18).
  */
 import { LIVES, WIN_SCORE_AFTER_BOSS, SESSION_MAX_MS } from "../config";
 
@@ -16,28 +13,46 @@ export type EndReason = "win" | "death" | "timeout";
 export class RunController {
   private _lives: number;
   private _ended: EndReason | null = null;
-  private _winTarget: number | null = null; // ustawiany przy pokonaniu bossa
+  private _bossDefeated = false;
+  private _pointsAfterBoss = 0;
 
   constructor(lives: number = LIVES) {
     this._lives = lives;
   }
 
+  /** Zgłasza pokonanie mini-bossa — od tej chwili liczą się pkt po bossie. */
+  onBossDefeated(): void {
+    if (!this._bossDefeated) {
+      this._bossDefeated = true;
+      this._pointsAfterBoss = 0;
+    }
+  }
+
+  get bossDefeated(): boolean {
+    return this._bossDefeated;
+  }
+
+  /** Punkty zdobyte po bossie (bez bonusu za samego bossa). */
+  get pointsAfterBoss(): number {
+    return this._pointsAfterBoss;
+  }
+
+  /** Ile punktów brakuje do wygranej po bossie (0 = można wygrać). */
+  get pointsToWin(): number {
+    return Math.max(0, WIN_SCORE_AFTER_BOSS - this._pointsAfterBoss);
+  }
+
   /**
-   * Zgłasza pokonanie mini-bossa: od tej chwili wygrana wymaga jeszcze
-   * WIN_SCORE_AFTER_BOSS pkt ponad podany wynik. Pierwsze zgłoszenie wiążące —
-   * kolejne są ignorowane (cel zostaje zamrożony).
+   * Nalicza punkty zdobyte po pokonaniu bossa (zabójstwa, fale).
+   * Bonus za bossa nie przechodzi przez tę metodę.
    */
-  onBossDefeated(scoreAtDefeat: number): void {
-    if (this._winTarget === null) this._winTarget = scoreAtDefeat + WIN_SCORE_AFTER_BOSS;
+  addPointsAfterBoss(points: number): void {
+    if (!this._bossDefeated || this._ended || points <= 0) return;
+    this._pointsAfterBoss += points;
   }
 
   get lives(): number {
     return this._lives;
-  }
-
-  /** Cel punktowy wygranej (ustawiony po pokonaniu bossa) lub null. Dla HUD. */
-  get winTarget(): number | null {
-    return this._winTarget;
   }
 
   get isOver(): boolean {
@@ -48,10 +63,6 @@ export class RunController {
     return this._ended;
   }
 
-  /**
-   * Rejestruje utratę życia. Zwraca true, gdy gracz przeżywa (respawn),
-   * false, gdy to była ostatnia śmierć (stan końcowy „death").
-   */
   loseLife(): boolean {
     if (this._ended) return false;
     this._lives = Math.max(0, this._lives - 1);
@@ -63,15 +74,16 @@ export class RunController {
   }
 
   /**
-   * Sprawdza warunki końca zależne od wyniku i czasu. Wygrana (boss pokonany +
-   * osiągnięty cel punktowy) ma priorytet nad timeoutem. Dopóki boss nie jest
-   * pokonany, wygrana jest niemożliwa. Po ustaleniu stanu kolejne wywołania
-   * zwracają ten sam powód.
+   * Sprawdza warunki końca. `score` i `elapsedMs` zostawione dla przyszłego
+   * tuningu; wygrana zależy od `pointsAfterBoss`.
    */
-  update(score: number, elapsedMs: number): EndReason | null {
+  update(_score: number, elapsedMs: number): EndReason | null {
     if (this._ended) return this._ended;
-    if (this._winTarget !== null && score >= this._winTarget) this._ended = "win";
-    else if (elapsedMs >= SESSION_MAX_MS) this._ended = "timeout";
+    if (this._bossDefeated && this._pointsAfterBoss >= WIN_SCORE_AFTER_BOSS) {
+      this._ended = "win";
+    } else if (elapsedMs >= SESSION_MAX_MS) {
+      this._ended = "timeout";
+    }
     return this._ended;
   }
 }

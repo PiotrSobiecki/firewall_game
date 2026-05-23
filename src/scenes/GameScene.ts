@@ -302,15 +302,24 @@ export class GameScene extends Phaser.Scene {
     this.hud.setBuffs(this.powerups, time);
     this.spawner.update(time, elapsed);
     this.hud.setWave(this.spawner.waveNumber);
-    this.hud.setObjective(this.score.score, this.run.winTarget);
+    this.hud.setObjective(this.score.score, this.run.bossDefeated, this.run.pointsAfterBoss);
+    this.checkRunEnd();
+  }
+
+  /** Sprawdza win/timeout zaraz po zmianie wyniku (nie czeka do końca klatki). */
+  private checkRunEnd(): void {
+    if (this.ended || !this.started) return;
+    const elapsed = this.time.now - this.startTime - this.pausedTotal;
     const reason = this.run.update(this.score.score, elapsed);
     if (reason) this.end(reason);
   }
 
   /** Eliminacja wroga (tarcza lub strzał) → punkty (z combo) + efekty + drop. */
   private onKill(enemy: Enemy): void {
-    this.score.addKill(enemy.type, this.time.now);
+    const pts = this.score.addKill(enemy.type, this.time.now);
+    if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
     this.hud.setScore(this.score.score);
+    this.checkRunEnd();
     this.cameras.main.shake(110, 0.006);
     this.maybeDrop(enemy.x, enemy.y);
     // wróg jest odepchnięty (dying) i odlatuje; po chwili wybucha i znika
@@ -330,9 +339,11 @@ export class GameScene extends Phaser.Scene {
     if (enemy.takeShot()) {
       this.burst.explode(14, enemy.x, enemy.y);
       enemy.disableBody(true, true);
-      this.score.addKill(enemy.type, this.time.now);
+      const pts = this.score.addKill(enemy.type, this.time.now);
+      if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
       this.hud.setScore(this.score.score);
       this.maybeDrop(enemy.x, enemy.y);
+      this.checkRunEnd();
     }
   }
 
@@ -431,8 +442,9 @@ export class GameScene extends Phaser.Scene {
     const by = this.boss.y;
     this.score.addBonus(BOSS.bonus);
     this.hud.setScore(this.score.score);
-    // Od teraz odliczamy WIN_SCORE_AFTER_BOSS pkt do wygranej (PRD zmiana).
-    this.run.onBossDefeated(this.score.score);
+    // Od teraz liczą się kolejne zabójstwa/fale — bonus bossa nie wlicza się do 100 pkt.
+    this.run.onBossDefeated();
+    this.checkRunEnd();
     this.burst.explode(48, bx, by);
     this.cameras.main.shake(260, 0.014);
     this.cameras.main.flash(180, 255, 0, 170);
@@ -443,9 +455,11 @@ export class GameScene extends Phaser.Scene {
   /** Przejście fali → bonus punktowy + sygnalizacja. */
   private onWaveComplete(waveNumber: number): void {
     if (this.ended) return;
-    this.score.addWaveBonus();
+    const pts = this.score.addWaveBonus();
+    if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
     this.hud.setScore(this.score.score);
     this.hud.flashWave(waveNumber);
+    this.checkRunEnd();
   }
 
   /** Kontrolki dotykowe (issue #8): joystick po lewej (ruch) + przycisk po prawej (tarcza). */

@@ -144,22 +144,21 @@ export class HUD {
   }
 
   /**
-   * Pasek + opis celu rundy. Dopóki boss nie pokonany (winTarget == null):
-   * progres do pojawienia się bossa. Po pokonaniu: odliczanie +100 do wygranej —
-   * label zmienia się na „DO WYGRANEJ: X", co od razu pokazuje, że kill zaliczony.
+   * Pasek + opis celu rundy. Dopóki boss nie pokonany: progres do spawnu bossa.
+   * Po pokonaniu: odliczanie 100 pkt zdobytych po bossie (bez bonusu za bossa).
    */
-  setObjective(score: number, winTarget: number | null): void {
-    if (winTarget === null) {
+  setObjective(score: number, bossDefeated: boolean, pointsAfterBoss: number): void {
+    if (!bossDefeated) {
       const ratio = Phaser.Math.Clamp(score / BOSS.spawnAtScore, 0, 1);
       this.progressFill.width = this.progressWidth * ratio;
       this.progressFill.fillColor = COLORS.cyan;
       this.label.setText(`WYNIK ${score}`);
     } else {
-      const base = winTarget - WIN_SCORE_AFTER_BOSS;
-      const ratio = Phaser.Math.Clamp((score - base) / WIN_SCORE_AFTER_BOSS, 0, 1);
+      const ratio = Phaser.Math.Clamp(pointsAfterBoss / WIN_SCORE_AFTER_BOSS, 0, 1);
       this.progressFill.width = this.progressWidth * ratio;
       this.progressFill.fillColor = COLORS.green;
-      this.label.setText(`WYNIK ${score} · DO WYGRANEJ: ${Math.max(0, winTarget - score)}`);
+      const left = Math.max(0, WIN_SCORE_AFTER_BOSS - pointsAfterBoss);
+      this.label.setText(`WYNIK ${score} · DO WYGRANEJ: ${left}`);
     }
   }
 
