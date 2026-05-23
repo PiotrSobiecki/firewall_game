@@ -314,11 +314,23 @@ export class GameScene extends Phaser.Scene {
     if (reason) this.end(reason);
   }
 
+  /** Po bossie: nalicz pkt i natychmiast zakończ rundę przy 100/100. */
+  private registerPostBossPoints(pts: number): void {
+    if (!this.run.bossDefeated || pts <= 0) return;
+    if (this.run.addPointsAfterBoss(pts)) {
+      this.hud.setObjective(this.score.score, true, this.run.pointsAfterBoss);
+      this.end("win");
+      return;
+    }
+    this.hud.setObjective(this.score.score, this.run.bossDefeated, this.run.pointsAfterBoss);
+  }
+
   /** Eliminacja wroga (tarcza lub strzał) → punkty (z combo) + efekty + drop. */
   private onKill(enemy: Enemy): void {
     const pts = this.score.addKill(enemy.type, this.time.now);
-    if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
     this.hud.setScore(this.score.score);
+    this.registerPostBossPoints(pts);
+    if (this.ended) return;
     this.checkRunEnd();
     this.cameras.main.shake(110, 0.006);
     this.maybeDrop(enemy.x, enemy.y);
@@ -340,8 +352,9 @@ export class GameScene extends Phaser.Scene {
       this.burst.explode(14, enemy.x, enemy.y);
       enemy.disableBody(true, true);
       const pts = this.score.addKill(enemy.type, this.time.now);
-      if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
       this.hud.setScore(this.score.score);
+      this.registerPostBossPoints(pts);
+      if (this.ended) return;
       this.maybeDrop(enemy.x, enemy.y);
       this.checkRunEnd();
     }
@@ -444,6 +457,7 @@ export class GameScene extends Phaser.Scene {
     this.hud.setScore(this.score.score);
     // Od teraz liczą się kolejne zabójstwa/fale — bonus bossa nie wlicza się do 100 pkt.
     this.run.onBossDefeated();
+    this.hud.setObjective(this.score.score, true, 0);
     this.checkRunEnd();
     this.burst.explode(48, bx, by);
     this.cameras.main.shake(260, 0.014);
@@ -456,8 +470,9 @@ export class GameScene extends Phaser.Scene {
   private onWaveComplete(waveNumber: number): void {
     if (this.ended) return;
     const pts = this.score.addWaveBonus();
-    if (this.run.bossDefeated) this.run.addPointsAfterBoss(pts);
     this.hud.setScore(this.score.score);
+    this.registerPostBossPoints(pts);
+    if (this.ended) return;
     this.hud.flashWave(waveNumber);
     this.checkRunEnd();
   }
@@ -588,7 +603,7 @@ export class GameScene extends Phaser.Scene {
     const data: EndData = {
       reason,
       score: this.score.score,
-      timeMs: this.time.now - this.startTime,
+      timeMs: this.time.now - this.startTime - this.pausedTotal,
     };
     this.time.delayedCall(220, () => this.scene.start("EndScene", data));
   }

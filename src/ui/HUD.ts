@@ -3,7 +3,7 @@ import {
   COLOR_HEX,
   COLORS,
   BOSS,
-  WIN_SCORE_AFTER_BOSS,
+  WIN_SCORE_AFTER_MINI_BOSS,
   GAME_WIDTH,
   GAME_HEIGHT,
   POWERUP,
@@ -154,11 +154,12 @@ export class HUD {
       this.progressFill.fillColor = COLORS.cyan;
       this.label.setText(`WYNIK ${score}`);
     } else {
-      const ratio = Phaser.Math.Clamp(pointsAfterBoss / WIN_SCORE_AFTER_BOSS, 0, 1);
+      const ratio = Phaser.Math.Clamp(pointsAfterBoss / WIN_SCORE_AFTER_MINI_BOSS, 0, 1);
       this.progressFill.width = this.progressWidth * ratio;
       this.progressFill.fillColor = COLORS.green;
-      const left = Math.max(0, WIN_SCORE_AFTER_BOSS - pointsAfterBoss);
-      this.label.setText(`WYNIK ${score} · DO WYGRANEJ: ${left}`);
+      this.label.setText(
+        `WYNIK ${score} · PO BOSSIE: ${Math.min(pointsAfterBoss, WIN_SCORE_AFTER_MINI_BOSS)}/${WIN_SCORE_AFTER_MINI_BOSS}`,
+      );
     }
   }
 

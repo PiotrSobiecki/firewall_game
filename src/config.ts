@@ -3,7 +3,7 @@
 
 /**
  * Wartość pokazywana na HUD jako orientacyjny cel/progres. NIE jest już sama
- * w sobie warunkiem wygranej — patrz WIN_SCORE_AFTER_BOSS i RunController.
+ * w sobie warunkiem wygranej — patrz WIN_SCORE_AFTER_MINI_BOSS i RunController.
  */
 export const TARGET_SCORE = 900;
 
@@ -12,7 +12,8 @@ export const TARGET_SCORE = 900;
  * mini-bossa, a POTEM zdobyć jeszcze tyle punktów, licząc od wyniku z chwili
  * jego pokonania. Bez pokonania bossa rundy nie da się wygrać.
  */
-export const WIN_SCORE_AFTER_BOSS = 100;
+/** Ile pkt zdobyć po pokonaniu mini-bossa, żeby wygrać rundę. */
+export const WIN_SCORE_AFTER_MINI_BOSS = 100;
 
 /** Twardy limit sesji: 2 pętle utworu „Firewall" (3:15) = 6:30. */
 export const SESSION_MAX_MS = 6 * 60 * 1000 + 30 * 1000;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { RunController } from "./RunController";
-import { SESSION_MAX_MS, WIN_SCORE_AFTER_BOSS } from "../config";
+import { SESSION_MAX_MS, WIN_SCORE_AFTER_MINI_BOSS } from "../config";
 
 describe("RunController", () => {
   it("starts with 3 lives and not over", () => {
@@ -24,13 +24,13 @@ describe("RunController", () => {
     expect(run.update(999_999, 1000)).toBe(null);
   });
 
-  it("wins after WIN_SCORE_AFTER_BOSS points earned post-boss", () => {
+  it("wins after WIN_SCORE_AFTER_MINI_BOSS points earned post-boss", () => {
     const run = new RunController();
     run.onBossDefeated();
-    run.addPointsAfterBoss(99);
+    expect(run.addPointsAfterBoss(99)).toBe(false);
     expect(run.update(0, 1000)).toBe(null);
-    run.addPointsAfterBoss(1);
-    expect(run.update(0, 1000)).toBe("win");
+    expect(run.addPointsAfterBoss(1)).toBe(true);
+    expect(run.endReason).toBe("win");
   });
 
   it("does not count pre-boss addPointsAfterBoss calls", () => {
@@ -49,14 +49,14 @@ describe("RunController", () => {
   it("prioritizes win over timeout when both conditions hold", () => {
     const run = new RunController();
     run.onBossDefeated();
-    run.addPointsAfterBoss(WIN_SCORE_AFTER_BOSS);
+    run.addPointsAfterBoss(WIN_SCORE_AFTER_MINI_BOSS);
     expect(run.update(0, SESSION_MAX_MS)).toBe("win");
   });
 
   it("keeps the first end reason on later updates (idempotent)", () => {
     const run = new RunController();
     run.onBossDefeated();
-    run.addPointsAfterBoss(WIN_SCORE_AFTER_BOSS);
+    run.addPointsAfterBoss(WIN_SCORE_AFTER_MINI_BOSS);
     run.update(0, 1000);
     expect(run.update(0, SESSION_MAX_MS)).toBe("win");
   });
