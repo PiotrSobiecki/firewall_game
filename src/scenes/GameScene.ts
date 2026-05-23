@@ -9,10 +9,12 @@ import {
   POWERUP,
   PLAYER,
   PLAYER_SHOT,
+  BOSS,
 } from "../config";
 import { Player } from "../entities/Player";
 import { Enemy } from "../entities/Enemy";
 import { PowerUp } from "../entities/PowerUp";
+import { Boss } from "../entities/Boss";
 import { ShieldSystem } from "../systems/ShieldSystem";
 import { ScoreSystem } from "../systems/ScoreSystem";
 import { RunController } from "../systems/RunController";
@@ -46,6 +48,8 @@ export class GameScene extends Phaser.Scene {
   private burst!: Phaser.GameObjects.Particles.ParticleEmitter;
   private playerVec = new Phaser.Math.Vector2();
   private nextShotAt = 0;
+  private boss?: Boss;
+  private bossSpawned = false;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"up" | "down" | "left" | "right", Phaser.Input.Keyboard.Key>;
@@ -89,6 +93,8 @@ export class GameScene extends Phaser.Scene {
     });
     this.powerups = new PowerUpSystem();
     this.nextShotAt = 0;
+    this.boss = undefined;
+    this.bossSpawned = false;
 
     this.burst = this.add.particles(0, 0, TEXTURE.particle, {
       speed: { min: 50, max: 200 },
@@ -143,13 +149,13 @@ export class GameScene extends Phaser.Scene {
     enemy.spawn(type, x, -24, level.speedMult, now);
   }
 
-  private fireBullet(x: number, y: number): void {
+  private fireBullet(x: number, y: number, vx = 0): void {
     const bullet = this.bullets.get(x, y, TEXTURE.bullet) as Phaser.Physics.Arcade.Image | null;
     if (!bullet) return;
     bullet.enableBody(true, x, y, true, true);
     (bullet.body as Phaser.Physics.Arcade.Body).setCircle(BULLET.radius, 6 - BULLET.radius, 6 - BULLET.radius);
     bullet.setDepth(4);
-    bullet.setVelocity(0, BULLET.speed);
+    bullet.setVelocity(vx, BULLET.speed);
   }
 
   /** Strzał gracza — wyłącznie w trybie PacketStream (auto-fire w górę). */
@@ -218,6 +224,13 @@ export class GameScene extends Phaser.Scene {
       if (!drop.active) continue;
       drop.bob(time);
       if (drop.y > GAME_HEIGHT + 20) drop.disableBody(true, true);
+    }
+
+    // mini-boss: wejście po przekroczeniu progu, równolegle do zwykłych fal
+    if (!this.bossSpawned && this.score.score >= BOSS.spawnAtScore) this.spawnBoss();
+    if (this.boss && this.boss.active) {
+      this.boss.behave(time, (bx, by, vx) => this.fireBullet(bx, by, vx));
+      this.damageBossWithShield(time);
     }
 
     // czas, combo i warunki końca zależne od wyniku/czasu (win / timeout)
@@ -312,6 +325,54 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.end("death");
     }
+  }
+
+  /** Wejście mini-bossa (PRD #12) — równolegle do zwykłych spawnów. */
+  private spawnBoss(): void {
+    this.bossSpawned = true;
+    this.boss = new Boss(this, GAME_WIDTH / 2, -60);
+    this.physics.add.overlap(this.player, this.boss, () => this.onBossContact());
+    this.physics.add.overlap(this.playerBullets, this.boss, (b) =>
+      this.onBossShot(b as Phaser.Physics.Arcade.Image),
+    );
+    this.hud.flashBoss();
+  }
+
+  /** Tarcza rani bossa, gdy ten znajdzie się w jej łuku (np. podczas nurkowania). */
+  private damageBossWithShield(now: number): void {
+    if (!this.boss || !this.shield.isActive) return;
+    const dx = this.boss.x - this.player.x;
+    const dy = this.boss.y - this.player.y;
+    if (dy > 0) return;
+    if (Math.hypot(dx, dy) > this.shield.currentRadius) return;
+    if (this.boss.hitByShield(now, this.shield.hitPower)) this.killBoss();
+  }
+
+  private onBossContact(): void {
+    if (this.ended || !this.boss?.active) return;
+    if (!this.player.takeDamage(this.boss.contactDamage, this.time.now)) return;
+    this.afterPlayerHit(this.player.x, this.player.y);
+  }
+
+  private onBossShot(shot: Phaser.Physics.Arcade.Image): void {
+    if (this.ended || !shot.active || !this.boss?.active) return;
+    shot.disableBody(true, true);
+    this.burst.explode(4, shot.x, shot.y);
+    if (this.boss.takeShot()) this.killBoss();
+  }
+
+  /** Pokonanie bossa → duży bonus + efekt. (Boss jest do minięcia.) */
+  private killBoss(): void {
+    if (!this.boss) return;
+    const bx = this.boss.x;
+    const by = this.boss.y;
+    this.score.addBonus(BOSS.bonus);
+    this.hud.setScore(this.score.score);
+    this.burst.explode(48, bx, by);
+    this.cameras.main.shake(260, 0.014);
+    this.cameras.main.flash(180, 255, 0, 170);
+    this.boss.destroy();
+    this.boss = undefined;
   }
 
   /** Przejście fali → bonus punktowy + sygnalizacja. */

@@ -46,6 +46,21 @@ export class ShieldSystem {
     return this.exhausted;
   }
 
+  /** Czy tarcza jest aktywna w tej klatce (do kolizji bossa poza poolem). */
+  get isActive(): boolean {
+    return this.active;
+  }
+
+  /** Bieżący promień (z uwzględnieniem ShieldBoost). */
+  get currentRadius(): number {
+    return this.radius;
+  }
+
+  /** Siła trafienia (liczba odbić/obrażeń z uwzględnieniem ShieldBoost). */
+  get hitPower(): number {
+    return this.bouncePower;
+  }
+
   /**
    * Aktualizuje energię i — gdy tarcza aktywna — odpycha oraz rani wrogów
    * w łuku nad statkiem. `holding` = czy Spacja jest wciśnięta w tej klatce.

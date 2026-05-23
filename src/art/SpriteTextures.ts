@@ -8,6 +8,7 @@ export const TEXTURE = {
   trojan: "trojan",
   worm: "worm",
   spyware: "spyware",
+  boss: "boss",
   bullet: "bullet",
   playerBullet: "playerBullet",
   puPacket: "pu_packet",
@@ -23,6 +24,7 @@ export const SPRITE = {
   trojan: { w: 44, h: 44 },
   worm: { w: 36, h: 36 },
   spyware: { w: 36, h: 36 },
+  boss: { w: 92, h: 80 },
   bullet: { w: 12, h: 12 },
   playerBullet: { w: 12, h: 16 },
   powerup: { w: 28, h: 28 },
@@ -45,6 +47,7 @@ export function registerGameTextures(scene: Phaser.Scene): void {
   createTrojanTexture(scene);
   createWormTexture(scene);
   createSpywareTexture(scene);
+  createBossTexture(scene);
   createBulletTexture(scene);
   createPlayerBulletTexture(scene);
   createPowerUpTextures(scene);
@@ -366,6 +369,67 @@ function createSpywareTexture(scene: Phaser.Scene): void {
   g.lineBetween(cx - 14, cy, cx + 14, cy);
 
   g.generateTexture(TEXTURE.spyware, w, h);
+  g.destroy();
+}
+
+/** Mini-boss — duży opancerzony rdzeń malware („Rootkit"): groźny i czytelny. */
+function createBossTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.boss;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2;
+
+  // poświata
+  g.fillStyle(COLORS.magenta, 0.12);
+  g.fillEllipse(cx, cy, w, h);
+
+  // skrzydła pancerza (boczne bloki)
+  g.fillStyle(0x2a0a22, 1);
+  g.lineStyle(2, COLORS.magenta, 0.9);
+  for (const s of [-1, 1]) {
+    const x0 = cx + s * 22;
+    g.fillRoundedRect(s < 0 ? x0 - 18 : x0, cy - 16, 18, 32, 4);
+    g.strokeRoundedRect(s < 0 ? x0 - 18 : x0, cy - 16, 18, 32, 4);
+    // dysze
+    g.fillStyle(COLORS.yellow, 0.8);
+    g.fillRect(s < 0 ? x0 - 14 : x0 + 4, cy + 16, 10, 4);
+    g.fillStyle(0x2a0a22, 1);
+  }
+
+  // centralny sześciokątny korpus
+  const hex = (r: number, ry: number): Phaser.Math.Vector2[] => {
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * r, cy + Math.sin(a) * ry));
+    }
+    return pts;
+  };
+  g.fillStyle(0x1a0a26, 1);
+  g.fillPoints(hex(26, 30), true, true);
+  g.lineStyle(3, COLORS.magenta, 1);
+  g.strokePoints(hex(26, 30), true, true);
+  g.lineStyle(1.5, COLORS.yellow, 0.5);
+  g.strokePoints(hex(18, 21), true, true);
+
+  // wielkie złowrogie oko-rdzeń
+  g.fillStyle(COLORS.magenta, 0.3);
+  g.fillCircle(cx, cy, 14);
+  g.fillStyle(COLORS.yellow, 1);
+  g.fillCircle(cx, cy, 9);
+  g.fillStyle(0x1a0010, 1);
+  g.fillCircle(cx, cy, 5);
+  g.fillStyle(0xffffff, 0.9);
+  g.fillCircle(cx - 2, cy - 2, 2);
+
+  // kolce u dołu
+  g.fillStyle(COLORS.magenta, 1);
+  for (let i = -2; i <= 2; i++) {
+    const x = cx + i * 10;
+    g.fillTriangle(x - 4, cy + 26, x + 4, cy + 26, x, cy + 34);
+  }
+
+  g.generateTexture(TEXTURE.boss, w, h);
   g.destroy();
 }
 

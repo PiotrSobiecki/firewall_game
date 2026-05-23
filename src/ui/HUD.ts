@@ -216,6 +216,26 @@ export class HUD {
     });
   }
 
+  /** Alarm wejścia mini-bossa. */
+  flashBoss(): void {
+    const t = this.scene.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.3, "⚠ MINI-BOSS ⚠", {
+        fontFamily: "monospace",
+        fontSize: "26px",
+        color: COLOR_HEX.magenta,
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(17);
+    this.scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      scale: 1.3,
+      duration: 1400,
+      onComplete: () => t.destroy(),
+    });
+  }
+
   /** Krótki komunikat o przejściu fali (z bonusem). */
   flashWave(waveNumber: number): void {
     const t = this.scene.add

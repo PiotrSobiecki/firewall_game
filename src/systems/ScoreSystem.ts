@@ -53,6 +53,12 @@ export class ScoreSystem {
     return WAVE_BONUS;
   }
 
+  /** Dowolny bonus punktowy (np. pokonanie mini-bossa); nie zmienia combo. */
+  addBonus(points: number): number {
+    this._score += points;
+    return points;
+  }
+
   /** Kara za śmierć (PRD #18): odejmuje punkty (nie poniżej 0) i resetuje combo. */
   onDeath(): void {
     this._score = Math.max(0, this._score - RESPAWN_PENALTY);

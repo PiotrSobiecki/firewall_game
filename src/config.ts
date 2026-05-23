@@ -179,3 +179,24 @@ export const PLAYER_SHOT = {
   speed: 540,
   radius: 5,
 } as const;
+
+/**
+ * Mini-boss (PRD #12): wchodzi po przekroczeniu spawnAtScore, równolegle do
+ * zwykłych wrogów. Ma własny pasek HP (liczony w trafieniach tarczy/strzału),
+ * jest do minięcia (można wygrać go ignorując), a pokonanie daje bonus.
+ */
+export const BOSS = {
+  spawnAtScore: 900,
+  hp: 14, // liczba trafień (tarcza/strzał) do pokonania
+  enterSpeed: 70, // schodzenie wejściowe
+  strafeSpeed: 95, // ruch w poziomie u góry
+  strafeY: 160, // docelowa wysokość patrolu (pod HUD)
+  fireEveryMs: 1500,
+  contactDamage: 30,
+  bonus: 150,
+  hitCooldownMs: 220, // min. odstęp między trafieniami tarczy
+  // nurkowanie: boss okresowo zjeżdża w zasięg gracza (by dało się go bić tarczą)
+  diveEveryMs: 4200,
+  diveY: 470,
+  diveSpeed: 230,
+} as const;
