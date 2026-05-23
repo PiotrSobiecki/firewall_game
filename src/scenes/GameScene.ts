@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { TEXTURE } from "../art/SpriteTextures";
 import {
   COLORS,
+  COLOR_HEX,
   GAME_WIDTH,
   GAME_HEIGHT,
   SESSION_MAX_MS,
@@ -10,6 +11,7 @@ import {
   PLAYER,
   PLAYER_SHOT,
   BOSS,
+  TOUCH,
 } from "../config";
 import { Player } from "../entities/Player";
 import { Enemy } from "../entities/Enemy";
@@ -24,6 +26,8 @@ import type { DifficultyLevel } from "../systems/DifficultyCurve";
 import type { EnemyType, PowerUpType } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { HUD } from "../ui/HUD";
+import { MusicController } from "../systems/MusicController";
+import { followDrive } from "../systems/TouchMove";
 import type { EndData } from "./EndScene";
 
 const POWERUP_TYPES: PowerUpType[] = ["packetStream", "immunity", "shieldBoost", "firewallRepair"];
@@ -56,7 +60,28 @@ export class GameScene extends Phaser.Scene {
   private space!: Phaser.Input.Keyboard.Key;
 
   private startTime = 0;
+  private started = false; // czas/spawn startują przy 1. klatce update (zegar sceny != 0 dopiero wtedy)
   private ended = false;
+
+  private music!: MusicController;
+  private paused = false;
+  private pausedAt = 0;
+  private pausedTotal = 0; // łączny czas pauz — odejmowany od elapsed (uczciwy timeout)
+  private pauseOverlay?: Phaser.GameObjects.Text;
+
+  // Sterowanie dotykowe (issue #8) — tylko na urządzeniach dotykowych
+  private touchShield = false;
+  private shieldBtn?: Phaser.GameObjects.Arc;
+  private shieldPointerId = -1;
+  // wirtualny joystick (lewa): baza stała, gałka podąża za palcem
+  private joyActive = false;
+  private joyPointerId = -1;
+  private joyBaseX = 0;
+  private joyBaseY = 0;
+  private joyVecX = 0; // bieżące wychylenie -1..1
+  private joyVecY = 0;
+  private joyBase?: Phaser.GameObjects.Arc;
+  private joyKnob?: Phaser.GameObjects.Arc;
 
   constructor() {
     super("GameScene");
@@ -64,6 +89,9 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.ended = false;
+    this.started = false;
+    this.paused = false;
+    this.pausedTotal = 0;
     this.bg = new RetroGridBackground(this);
     this.score = new ScoreSystem();
     this.run = new RunController();
@@ -121,6 +149,22 @@ export class GameScene extends Phaser.Scene {
     }) as typeof this.wasd;
     this.space = kb.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
+    // Utwór leci od startu rozgrywki (idempotentnie — łapie też powtórkę z End).
+    // M włącza/wyłącza muzykę, P pauzuje/wznawia.
+    this.music = new MusicController(this);
+    this.music.start();
+    kb.on("keydown-M", () => this.music.toggle());
+    kb.on("keydown-P", () => this.togglePause());
+
+    // Dotyk: joystick (lewa) = ruch, przycisk (prawa) = tarcza. Klawiatura równolegle.
+    this.touchShield = false;
+    this.shieldPointerId = -1;
+    this.joyActive = false;
+    this.joyPointerId = -1;
+    this.joyVecX = 0;
+    this.joyVecY = 0;
+    if (this.sys.game.device.input.touch) this.setupTouchControls();
+
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => this.onContact(e as Enemy));
     this.physics.add.overlap(this.player, this.bullets, (_p, b) =>
       this.onBulletHit(b as Phaser.Physics.Arcade.Image),
@@ -137,8 +181,6 @@ export class GameScene extends Phaser.Scene {
       (waveNumber) => this.onWaveComplete(waveNumber),
     );
 
-    this.startTime = this.time.now;
-    this.spawner.start(this.time.now);
   }
 
   private spawnEnemy(type: EnemyType, level: DifficultyLevel, now: number): void {
@@ -180,7 +222,16 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number): void {
-    if (this.ended) return;
+    if (this.ended || this.paused) return;
+
+    // Start czasu i spawnów dopiero przy 1. klatce gry — w create() zegar sceny
+    // jeszcze nie tyka (this.time.now = 0), więc elapsed liczyłby się od bootu.
+    if (!this.started) {
+      this.started = true;
+      this.startTime = this.time.now;
+      this.spawner.start(this.time.now);
+    }
+
     const dtSec = delta / 1000;
     this.bg.update(dtSec);
 
@@ -188,11 +239,21 @@ export class GameScene extends Phaser.Scene {
     const right = this.cursors.right.isDown || this.wasd.right.isDown;
     const up = this.cursors.up.isDown || this.wasd.up.isDown;
     const down = this.cursors.down.isDown || this.wasd.down.isDown;
-    this.player.drive((right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0));
+    const kix = (right ? 1 : 0) - (left ? 1 : 0);
+    const kiy = (down ? 1 : 0) - (up ? 1 : 0);
+    if (kix !== 0 || kiy !== 0) {
+      this.player.drive(kix, kiy); // klawiatura ma pierwszeństwo
+    } else if (this.joyActive) {
+      this.player.driveProportional(this.joyVecX, this.joyVecY); // joystick: prędkość ~ wychylenie
+    } else {
+      this.player.drive(0, 0);
+    }
 
     // ShieldBoost: większy promień + mocniejsze odbicia na czas buffa
     this.shield.setBoosted(this.powerups.isActive("shieldBoost", time));
-    this.shield.update(dtSec, this.space.isDown, this.enemies, (enemy) => this.onKill(enemy));
+    this.shield.update(dtSec, this.space.isDown || this.touchShield, this.enemies, (enemy) =>
+      this.onKill(enemy),
+    );
     this.hud.setEnergy(this.shield.energyRatio, this.shield.isExhausted);
 
     // PacketStream: auto-fire w górę (jedyny tryb strzału)
@@ -234,12 +295,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     // czas, combo i warunki końca zależne od wyniku/czasu (win / timeout)
-    const elapsed = this.time.now - this.startTime;
+    // pausedTotal odejmujemy, by pauza nie „zjadała" limitu czasu rundy
+    const elapsed = this.time.now - this.startTime - this.pausedTotal;
     this.hud.setTime(elapsed, SESSION_MAX_MS);
     this.hud.setCombo(this.score.comboAt(time), this.score.multiplierAt(time));
     this.hud.setBuffs(this.powerups, time);
     this.spawner.update(time, elapsed);
     this.hud.setWave(this.spawner.waveNumber);
+    this.hud.setObjective(this.score.score, this.run.winTarget);
     const reason = this.run.update(this.score.score, elapsed);
     if (reason) this.end(reason);
   }
@@ -368,6 +431,8 @@ export class GameScene extends Phaser.Scene {
     const by = this.boss.y;
     this.score.addBonus(BOSS.bonus);
     this.hud.setScore(this.score.score);
+    // Od teraz odliczamy WIN_SCORE_AFTER_BOSS pkt do wygranej (PRD zmiana).
+    this.run.onBossDefeated(this.score.score);
     this.burst.explode(48, bx, by);
     this.cameras.main.shake(260, 0.014);
     this.cameras.main.flash(180, 255, 0, 170);
@@ -381,6 +446,123 @@ export class GameScene extends Phaser.Scene {
     this.score.addWaveBonus();
     this.hud.setScore(this.score.score);
     this.hud.flashWave(waveNumber);
+  }
+
+  /** Kontrolki dotykowe (issue #8): joystick po lewej (ruch) + przycisk po prawej (tarcza). */
+  private setupTouchControls(): void {
+    this.input.addPointer(2); // joystick + tarcza jednocześnie
+
+    // przycisk TARCZA — prawy dolny róg
+    const r = TOUCH.shieldBtnRadius;
+    const bx = GAME_WIDTH - r - 18;
+    const by = GAME_HEIGHT - r - 22;
+    this.shieldBtn = this.add.circle(bx, by, r, COLORS.cyan, 0.12).setDepth(15);
+    this.shieldBtn.setStrokeStyle(2, COLORS.cyan, 0.7);
+    this.add
+      .text(bx, by, "TARCZA", { fontFamily: "monospace", fontSize: "12px", color: COLOR_HEX.cyan })
+      .setOrigin(0.5)
+      .setDepth(16);
+    this.shieldBtn.setInteractive();
+    this.shieldBtn.on("pointerdown", (p: Phaser.Input.Pointer) => {
+      this.touchShield = true;
+      this.shieldPointerId = p.id;
+    });
+    const release = (p: Phaser.Input.Pointer) => {
+      if (p.id === this.shieldPointerId) {
+        this.touchShield = false;
+        this.shieldPointerId = -1;
+      }
+    };
+    this.shieldBtn.on("pointerup", release);
+    this.shieldBtn.on("pointerout", release);
+
+    // wirtualny joystick — lewy dolny róg (baza stała + gałka)
+    this.joyBaseX = TOUCH.joyMargin + TOUCH.joyRadius;
+    this.joyBaseY = GAME_HEIGHT - TOUCH.joyMargin - TOUCH.joyRadius;
+    this.joyBase = this.add
+      .circle(this.joyBaseX, this.joyBaseY, TOUCH.joyRadius, COLORS.magenta, 0.1)
+      .setDepth(15);
+    this.joyBase.setStrokeStyle(2, COLORS.magenta, 0.55);
+    this.joyKnob = this.add
+      .circle(this.joyBaseX, this.joyBaseY, TOUCH.knobRadius, COLORS.magenta, 0.35)
+      .setDepth(16);
+
+    // pointer w lewej połowie (poza przyciskiem tarczy) steruje joystickiem
+    this.input.on("pointerdown", this.onJoyInput, this);
+    this.input.on("pointermove", this.onJoyInput, this);
+    this.input.on("pointerup", (p: Phaser.Input.Pointer) => {
+      if (p.id === this.joyPointerId) this.resetJoy();
+    });
+  }
+
+  /** Pointer steruje joystickiem: gałka podąża za palcem (clamp do promienia bazy). */
+  private onJoyInput(p: Phaser.Input.Pointer): void {
+    if (this.ended || this.paused) return;
+    // pierwszy kontakt: złap tylko gdy w lewej połowie i poza strefą tarczy
+    if (!this.joyActive) {
+      if (p.id !== this.joyPointerId) {
+        if (p.x > GAME_WIDTH * 0.5) return;
+        if (this.overShieldBtn(p)) return;
+        this.joyActive = true;
+        this.joyPointerId = p.id;
+      }
+    } else if (p.id !== this.joyPointerId) {
+      return; // inny palec (np. tarcza) — nie rusza joysticka
+    }
+
+    const v = followDrive(
+      { x: this.joyBaseX, y: this.joyBaseY },
+      { x: p.x, y: p.y },
+      TOUCH.deadzone,
+      TOUCH.joyRadius,
+    );
+    this.joyVecX = v.x;
+    this.joyVecY = v.y;
+    // gałka: wychylenie clampowane do promienia bazy
+    this.joyKnob?.setPosition(
+      this.joyBaseX + v.x * TOUCH.joyRadius,
+      this.joyBaseY + v.y * TOUCH.joyRadius,
+    );
+  }
+
+  private resetJoy(): void {
+    this.joyActive = false;
+    this.joyPointerId = -1;
+    this.joyVecX = 0;
+    this.joyVecY = 0;
+    this.joyKnob?.setPosition(this.joyBaseX, this.joyBaseY);
+  }
+
+  private overShieldBtn(p: Phaser.Input.Pointer): boolean {
+    if (!this.shieldBtn) return false;
+    const d = Phaser.Math.Distance.Between(p.x, p.y, this.shieldBtn.x, this.shieldBtn.y);
+    return d <= TOUCH.shieldBtnRadius + 8;
+  }
+
+  /** Pauza (P): zatrzymuje fizykę i pętlę gry, pokazuje overlay, mrozi czas rundy. */
+  private togglePause(): void {
+    if (this.ended) return;
+    this.paused = !this.paused;
+    if (this.paused) {
+      this.physics.pause();
+      this.pausedAt = this.time.now;
+      this.pauseOverlay = this.add
+        .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, "⏸ PAUZA\n\nP — wznów", {
+          fontFamily: "monospace",
+          fontSize: "26px",
+          color: COLOR_HEX.cyan,
+          align: "center",
+          backgroundColor: "#0a0e17",
+          padding: { x: 22, y: 18 },
+        })
+        .setOrigin(0.5)
+        .setDepth(20);
+    } else {
+      this.physics.resume();
+      this.pausedTotal += this.time.now - this.pausedAt;
+      this.pauseOverlay?.destroy();
+      this.pauseOverlay = undefined;
+    }
   }
 
   private end(reason: EndData["reason"]): void {

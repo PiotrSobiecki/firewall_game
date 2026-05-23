@@ -1,8 +1,11 @@
 import Phaser from "phaser";
-import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, YOUTUBE_URL } from "../config";
+import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, YOUTUBE_URL, LEADERBOARD_SIZE } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
+import { qualifies, topEntries, type RunResult } from "../systems/ranking";
+import { fetchTopScores, submitScore } from "../systems/scoreApi";
+import { MusicController } from "../systems/MusicController";
 
-/** Powód zakończenia rundy. (death/timeout rozbudowane w issue #3.) */
+/** Powód zakończenia rundy + wynik i czas (z GameScene). */
 export interface EndData {
   reason: "win" | "death" | "timeout";
   score: number;
@@ -15,7 +18,16 @@ const TITLES: Record<EndData["reason"], { text: string; color: string }> = {
   timeout: { text: "CZAS MINĄŁ", color: COLOR_HEX.yellow },
 };
 
-/** Ekran końcowy: wynik + powód + retry + link do utworu na YouTube. */
+const RANKING_TOP_Y = 150;
+
+/** mm:ss z milisekund. */
+function formatTime(ms: number): string {
+  const m = Math.floor(ms / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Ekran końcowy: wynik + globalny ranking TOP 10 (z wpisem imienia) + retry + YouTube. */
 export class EndScene extends Phaser.Scene {
   private bg!: RetroGridBackground;
 
@@ -25,13 +37,16 @@ export class EndScene extends Phaser.Scene {
 
   create(data: EndData): void {
     this.bg = new RetroGridBackground(this);
-    const title = TITLES[data.reason];
-    const seconds = (data.timeMs / 1000).toFixed(1);
 
+    // Jeśli muzyka gra, leci dalej (nie urywamy jej przy końcu); M ją wł./wył.
+    const music = new MusicController(this);
+    this.input.keyboard?.on("keydown-M", () => music.toggle());
+
+    const title = TITLES[data.reason];
     this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.26, title.text, {
+      .text(GAME_WIDTH / 2, 60, title.text, {
         fontFamily: "monospace",
-        fontSize: "32px",
+        fontSize: "28px",
         color: title.color,
         fontStyle: "bold",
         align: "center",
@@ -40,26 +55,164 @@ export class EndScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(
-        GAME_WIDTH / 2,
-        GAME_HEIGHT * 0.42,
-        `WYNIK: ${data.score}\nCZAS: ${seconds}s`,
-        {
-          fontFamily: "monospace",
-          fontSize: "20px",
-          color: COLOR_HEX.cyan,
-          align: "center",
-        },
-      )
+      .text(GAME_WIDTH / 2, 104, `WYNIK ${data.score} · CZAS ${formatTime(data.timeMs)}`, {
+        fontFamily: "monospace",
+        fontSize: "16px",
+        color: COLOR_HEX.cyan,
+      })
       .setOrigin(0.5);
 
-    const yt = this.makeButton(GAME_HEIGHT * 0.6, "▶ OBEJRZYJ NA YOUTUBE", COLOR_HEX.yellow);
+    // przyciski (klik zawsze; Enter dopiero gdy nie ma już pola na imię)
+    const yt = this.makeButton(GAME_HEIGHT - 150, "▶ OBEJRZYJ NA YOUTUBE", COLOR_HEX.yellow);
     yt.on("pointerdown", () => window.open(YOUTUBE_URL, "_blank", "noopener"));
+    const retry = this.makeButton(GAME_HEIGHT - 94, "↻ ZAGRAJ JESZCZE RAZ", COLOR_HEX.green);
+    retry.on("pointerdown", () => this.scene.start("GameScene"));
 
-    const retry = this.makeButton(GAME_HEIGHT * 0.6 + 56, "↻ ZAGRAJ JESZCZE RAZ", COLOR_HEX.green);
-    const replay = () => this.scene.start("GameScene");
-    retry.on("pointerdown", replay);
-    this.input.keyboard?.once("keydown-ENTER", replay);
+    void this.loadRanking({ name: "", ...data });
+  }
+
+  /** Pobiera ranking, ew. pyta o imię i zapisuje wynik. Offline → komunikat. */
+  private async loadRanking(result: RunResult): Promise<void> {
+    let top: RunResult[];
+    try {
+      top = await fetchTopScores();
+    } catch {
+      this.renderUnavailable();
+      this.bindRetryEnter();
+      return;
+    }
+
+    if (qualifies(top, result)) {
+      this.promptName(async (name) => {
+        result.name = name;
+        try {
+          await submitScore(result);
+          top = await fetchTopScores();
+        } catch {
+          /* zapis się nie udał — pokażemy ostatnio pobrany ranking */
+        }
+        this.renderRanking(top, result);
+        this.bindRetryEnter();
+      });
+    } else {
+      this.renderRanking(top, null);
+      this.bindRetryEnter();
+    }
+  }
+
+  private renderUnavailable(): void {
+    this.add
+      .text(GAME_WIDTH / 2, RANKING_TOP_Y + 20, "RANKING NIEDOSTĘPNY\n(brak połączenia)", {
+        fontFamily: "monospace",
+        fontSize: "14px",
+        color: COLOR_HEX.magenta,
+        align: "center",
+      })
+      .setOrigin(0.5);
+  }
+
+  /** Rysuje listę TOP N, podświetlając wpis gracza (jeśli jest). */
+  private renderRanking(list: RunResult[], mine: RunResult | null): void {
+    const top = topEntries(list, LEADERBOARD_SIZE);
+    this.add
+      .text(GAME_WIDTH / 2, RANKING_TOP_Y, `— RANKING TOP ${LEADERBOARD_SIZE} —`, {
+        fontFamily: "monospace",
+        fontSize: "13px",
+        color: COLOR_HEX.magenta,
+      })
+      .setOrigin(0.5);
+
+    if (top.length === 0) {
+      this.add
+        .text(GAME_WIDTH / 2, RANKING_TOP_Y + 30, "(brak wyników)", {
+          fontFamily: "monospace",
+          fontSize: "13px",
+          color: COLOR_HEX.cyan,
+        })
+        .setOrigin(0.5);
+      return;
+    }
+
+    let highlighted = mine === null;
+    top.forEach((e, i) => {
+      const y = RANKING_TOP_Y + 26 + i * 25;
+      const isMine =
+        !highlighted &&
+        mine !== null &&
+        e.name === mine.name &&
+        e.score === mine.score &&
+        e.timeMs === mine.timeMs &&
+        e.reason === mine.reason;
+      if (isMine) highlighted = true;
+      const rank = (i + 1).toString().padStart(2, " ");
+      const name = e.name.slice(0, 11).padEnd(11, " ");
+      const timeCol = (e.reason === "win" ? formatTime(e.timeMs) : "—").padStart(5, " ");
+      const score = e.score.toString().padStart(4, " ");
+      const color = isMine ? COLOR_HEX.yellow : e.reason === "win" ? COLOR_HEX.green : COLOR_HEX.cyan;
+      this.add
+        .text(GAME_WIDTH / 2, y, `${isMine ? "►" : " "}${rank} ${name}${timeCol}  ${score}`, {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color,
+          fontStyle: isMine ? "bold" : "normal",
+        })
+        .setOrigin(0.5);
+    });
+  }
+
+  /** Modalne pole na imię (HTML overlay — działa na desktop i mobile). */
+  private promptName(onName: (name: string) => void): void {
+    // Phaser domyślnie robi preventDefault na WASD/strzałkach/spacji (capture),
+    // przez co nie wpisałyby się do pola HTML. Wyłączamy na czas wpisywania.
+    this.input.keyboard?.disableGlobalCapture();
+
+    const wrap = document.createElement("div");
+    wrap.style.cssText =
+      "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;" +
+      "background:rgba(10,14,23,0.85);z-index:1000;font-family:monospace;";
+    const box = document.createElement("div");
+    box.style.cssText =
+      "background:#0d1622;border:2px solid #00f0ff;border-radius:10px;padding:22px 26px;" +
+      "text-align:center;box-shadow:0 0 26px rgba(0,240,255,0.45);";
+    const label = document.createElement("div");
+    label.textContent = `TOP ${LEADERBOARD_SIZE}! WPISZ IMIĘ:`;
+    label.style.cssText = "color:#00f0ff;font-size:15px;margin-bottom:12px;letter-spacing:1px;";
+    const input = document.createElement("input");
+    input.maxLength = 12;
+    input.placeholder = "GRACZ";
+    input.autocapitalize = "characters";
+    input.style.cssText =
+      "font-family:monospace;font-size:20px;text-align:center;text-transform:uppercase;" +
+      "padding:8px 10px;width:180px;background:#08111c;color:#00ff88;border:1px solid #00f0ff;" +
+      "border-radius:6px;outline:none;";
+    const btn = document.createElement("button");
+    btn.textContent = "OK";
+    btn.style.cssText =
+      "display:block;margin:14px auto 0;font-family:monospace;font-size:18px;color:#0a0e17;" +
+      "background:#00ff88;border:none;border-radius:6px;padding:8px 28px;cursor:pointer;";
+    box.append(label, input, btn);
+    wrap.append(box);
+    document.body.append(wrap);
+    window.setTimeout(() => input.focus(), 50);
+
+    const submit = () => {
+      const name = (input.value.trim() || "GRACZ").toUpperCase().slice(0, 12);
+      this.input.keyboard?.enableGlobalCapture(); // przywróć przechwytywanie do gry
+      wrap.remove();
+      onName(name);
+    };
+    btn.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") submit();
+    });
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.enableGlobalCapture();
+      wrap.remove();
+    });
+  }
+
+  private bindRetryEnter(): void {
+    this.input.keyboard?.once("keydown-ENTER", () => this.scene.start("GameScene"));
   }
 
   private makeButton(y: number, label: string, color: string): Phaser.GameObjects.Text {

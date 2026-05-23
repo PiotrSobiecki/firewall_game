@@ -34,3 +34,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Cloudflare Worker — lokalne sekrety i cache
+.dev.vars
+worker/.dev.vars
+.wrangler/
+worker/.wrangler/

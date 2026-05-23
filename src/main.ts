@@ -16,4 +16,9 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, MenuScene, GameScene, EndScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Tylko w dev: dostęp do gry z konsoli/testów (wycinane z buildu produkcyjnego).
+if (import.meta.env.DEV) {
+  (window as unknown as { game: Phaser.Game }).game = game;
+}

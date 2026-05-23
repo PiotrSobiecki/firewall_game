@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0a0e17"/>
+  <!-- neonowa tarcza/firewall -->
+  <path d="M32 8 L52 16 V32 C52 45 43 53 32 57 C21 53 12 45 12 32 V16 Z"
+        fill="none" stroke="#00f0ff" stroke-width="3"/>
+  <path d="M32 8 L52 16 V32 C52 45 43 53 32 57 Z" fill="#ff00aa" fill-opacity="0.18"/>
+  <!-- mur (cegły) -->
+  <g stroke="#00ff88" stroke-width="2.5">
+    <line x1="20" y1="26" x2="44" y2="26"/>
+    <line x1="20" y1="34" x2="44" y2="34"/>
+    <line x1="20" y1="42" x2="44" y2="42"/>
+    <line x1="32" y1="26" x2="32" y2="34"/>
+    <line x1="26" y1="34" x2="26" y2="42"/>
+    <line x1="38" y1="34" x2="38" y2="42"/>
+  </g>
+</svg>

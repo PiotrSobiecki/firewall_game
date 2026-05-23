@@ -65,6 +65,15 @@ export class Player extends Phaser.Physics.Arcade.Image {
     this.y = Phaser.Math.Clamp(this.y, PLAYER.zoneTop, GAME_HEIGHT - 24);
   }
 
+  /**
+   * Jak `drive`, ale ZACHOWUJE wielkość wektora (sx, sy ∈ [-1,1]) — prędkość
+   * proporcjonalna do dystansu. Dla dotyku: statek zwalnia i staje przy palcu.
+   */
+  driveProportional(sx: number, sy: number): void {
+    this.setVelocity(sx * PLAYER.speed, sy * PLAYER.speed);
+    this.y = Phaser.Math.Clamp(this.y, PLAYER.zoneTop, GAME_HEIGHT - 24);
+  }
+
   /** Respawn po stracie życia: pełne HP, dłuższa nietykalność, reset pozycji/prędkości. */
   respawn(x: number, y: number, now: number): void {
     this.hp = PLAYER.maxHp;

@@ -2,7 +2,8 @@ import Phaser from "phaser";
 import {
   COLOR_HEX,
   COLORS,
-  TARGET_SCORE,
+  BOSS,
+  WIN_SCORE_AFTER_BOSS,
   GAME_WIDTH,
   GAME_HEIGHT,
   POWERUP,
@@ -99,9 +100,9 @@ export class HUD {
       .setOrigin(0, 0)
       .setDepth(15);
 
-    // --- WYNIK + progres do celu ---
+    // --- WYNIK + progres do celu (boss, potem +100 do wygranej) ---
     this.label = scene.add
-      .text(16, 12, `WYNIK 0 / ${TARGET_SCORE}`, {
+      .text(16, 12, "WYNIK 0", {
         fontFamily: "monospace",
         fontSize: "18px",
         color: COLOR_HEX.cyan,
@@ -139,9 +140,27 @@ export class HUD {
   }
 
   setScore(score: number): void {
-    this.label.setText(`WYNIK ${score} / ${TARGET_SCORE}`);
-    const ratio = Phaser.Math.Clamp(score / TARGET_SCORE, 0, 1);
-    this.progressFill.width = this.progressWidth * ratio;
+    this.label.setText(`WYNIK ${score}`);
+  }
+
+  /**
+   * Pasek + opis celu rundy. Dopóki boss nie pokonany (winTarget == null):
+   * progres do pojawienia się bossa. Po pokonaniu: odliczanie +100 do wygranej —
+   * label zmienia się na „DO WYGRANEJ: X", co od razu pokazuje, że kill zaliczony.
+   */
+  setObjective(score: number, winTarget: number | null): void {
+    if (winTarget === null) {
+      const ratio = Phaser.Math.Clamp(score / BOSS.spawnAtScore, 0, 1);
+      this.progressFill.width = this.progressWidth * ratio;
+      this.progressFill.fillColor = COLORS.cyan;
+      this.label.setText(`WYNIK ${score}`);
+    } else {
+      const base = winTarget - WIN_SCORE_AFTER_BOSS;
+      const ratio = Phaser.Math.Clamp((score - base) / WIN_SCORE_AFTER_BOSS, 0, 1);
+      this.progressFill.width = this.progressWidth * ratio;
+      this.progressFill.fillColor = COLORS.green;
+      this.label.setText(`WYNIK ${score} · DO WYGRANEJ: ${Math.max(0, winTarget - score)}`);
+    }
   }
 
   setHp(ratio: number): void {

@@ -1,8 +1,18 @@
 // Stałe gry — pojedyncze źródło prawdy, do tuningu w playteście.
 // Wartości zgodne z PRD.md (#1).
 
-/** Próg wygranej — osiągnięcie kończy rundę jako wygrana. */
-export const TARGET_SCORE = 1000;
+/**
+ * Wartość pokazywana na HUD jako orientacyjny cel/progres. NIE jest już sama
+ * w sobie warunkiem wygranej — patrz WIN_SCORE_AFTER_BOSS i RunController.
+ */
+export const TARGET_SCORE = 1200;
+
+/**
+ * Wygrana (zmiana 2026-05-23): nie wystarczy próg punktów. Trzeba pokonać
+ * mini-bossa, a POTEM zdobyć jeszcze tyle punktów, licząc od wyniku z chwili
+ * jego pokonania. Bez pokonania bossa rundy nie da się wygrać.
+ */
+export const WIN_SCORE_AFTER_BOSS = 100;
 
 /** Twardy limit sesji: 2 pętle utworu „Firewall" (3:15) = 6:30. */
 export const SESSION_MAX_MS = 6 * 60 * 1000 + 30 * 1000;
@@ -32,12 +42,44 @@ export const COMBO = {
 /** Bonus punktowy za przejście fali (PRD: +25). */
 export const WAVE_BONUS = 25;
 
+/** Ranking: ile miejsc trzymamy/pokazujemy (TOP N). Imię pytane gdy wynik wchodzi do TOP N. */
+export const LEADERBOARD_SIZE = 10;
+
+/**
+ * Adres API rankingu (Cloudflare Worker + Neon). Globalny ranking online —
+ * w produkcji ustaw `VITE_API_BASE` na URL workera; lokalnie domyślnie
+ * `wrangler dev` na :8787. Bez sieci ranking jest niedostępny.
+ */
+export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
+
 /** Link do utworu na YouTube — podmienić przed publikacją. */
-export const YOUTUBE_URL = "https://www.youtube.com/watch?v=XXXXXXXX";
+export const YOUTUBE_URL = "https://www.youtube.com/watch?v=fiKG2Yb9goc";
+
+/**
+ * Audio (PRD #27–28): utwór „Firewall" leci w pętli przez całą rozgrywkę.
+ * Plik w `public/` (serwowany przez Vite). Brak pliku nie blokuje gry.
+ */
+export const AUDIO = {
+  trackFile: "firewall.mp3",
+  musicVolume: 0.6,
+} as const;
 
 /** Rozdzielczość logiczna (portrait jak mobile shmup). */
 export const GAME_WIDTH = 480;
 export const GAME_HEIGHT = 800;
+
+/**
+ * Sterowanie dotykowe (issue #8): wirtualny joystick po lewej (ruch), przycisk
+ * po prawej (tarcza). Tylko na urządzeniach dotykowych; klawiatura na desktopie
+ * działa równolegle.
+ */
+export const TOUCH = {
+  deadzone: 6, // w tym promieniu od środka bazy statek stoi (brak drgań)
+  joyRadius: 54, // promień bazy = wychylenie dające pełną prędkość
+  knobRadius: 24, // promień gałki
+  joyMargin: 26, // odsunięcie środka bazy od lewego i dolnego brzegu (+joyRadius)
+  shieldBtnRadius: 46,
+} as const;
 
 /** Paleta retro-neon jako liczby (Graphics) i stringi (tekst). */
 export const COLORS = {
@@ -146,7 +188,11 @@ export const DIFFICULTY = {
 } as const;
 
 /** Typy power-upów (PRD #22–26). */
-export type PowerUpType = "packetStream" | "immunity" | "shieldBoost" | "firewallRepair";
+export type PowerUpType =
+  | "packetStream"
+  | "immunity"
+  | "shieldBoost"
+  | "firewallRepair";
 
 /**
  * Power-upy: wrogowie z szansą dropChance upuszczają jeden z typów; gracz je
