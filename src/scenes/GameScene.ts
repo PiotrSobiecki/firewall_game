@@ -442,7 +442,9 @@ export class GameScene extends Phaser.Scene {
     const dx = this.boss.x - this.player.x;
     const dy = this.boss.y - this.player.y;
     if (dy > 0) return;
-    if (Math.hypot(dx, dy) > this.shield.currentRadius) return;
+    // Zasięg do POWIERZCHNI bossa (łuk tarczy o promień jego ciała), inaczej
+    // trafienie wymagało wejścia w bossa (i oberwania obrażeniami kontaktowymi).
+    if (Math.hypot(dx, dy) > this.shield.currentRadius + this.boss.bodyRadius) return;
     if (this.boss.hitByShield(now, this.shield.hitPower)) this.killBoss();
   }
 

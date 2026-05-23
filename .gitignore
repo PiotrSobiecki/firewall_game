@@ -40,3 +40,4 @@ Thumbs.db
 worker/.dev.vars
 .wrangler/
 worker/.wrangler/
+worker/.production.vars

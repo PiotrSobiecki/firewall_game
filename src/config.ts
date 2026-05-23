@@ -16,7 +16,7 @@ export const TARGET_SCORE = 900;
 export const WIN_SCORE_AFTER_MINI_BOSS = 100;
 
 /** Wersja buildu (widać w menu — sprawdź, czy masz aktualny front). */
-export const BUILD_TAG = "2026-05-23-win";
+export const BUILD_TAG = "2026-05-23-boss-reach";
 
 /** Twardy limit sesji: 2 pętle utworu „Firewall" (3:15) = 6:30. */
 export const SESSION_MAX_MS = 6 * 60 * 1000 + 30 * 1000;
@@ -50,12 +50,16 @@ export const WAVE_BONUS = 25;
 export const LEADERBOARD_SIZE = 10;
 
 /**
- * Adres API rankingu (Cloudflare Worker + Neon). Globalny ranking online —
- * w produkcji ustaw `VITE_API_BASE` na URL workera; lokalnie domyślnie
- * `wrangler dev` na :8787. Bez sieci ranking jest niedostępny.
+ * Adres API rankingu (Cloudflare Worker + Neon). Globalny ranking online.
+ * Build prod celuje w workera; `vite dev` w localhost (`wrangler dev` :8787).
+ * `VITE_API_BASE` nadpisuje oba (nie polegamy na gitignorowanym .env w buildzie).
+ * Bez sieci ranking jest niedostępny.
  */
 export const API_BASE =
-  import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
+  import.meta.env.VITE_API_BASE ??
+  (import.meta.env.DEV
+    ? "http://localhost:8787"
+    : "https://firewall-scores.piotr-sobiecki.workers.dev");
 
 /** Link do utworu na YouTube — podmienić przed publikacją. */
 export const YOUTUBE_URL = "https://www.youtube.com/watch?v=fiKG2Yb9goc";
@@ -238,7 +242,7 @@ export const PLAYER_SHOT = {
  */
 export const BOSS = {
   spawnAtScore: 900,
-  hp: 14, // liczba trafień (tarcza/strzał) do pokonania
+  hp: 10, // liczba trafień (tarcza/strzał) do pokonania
   enterSpeed: 70, // schodzenie wejściowe
   strafeSpeed: 95, // ruch w poziomie u góry
   strafeY: 160, // docelowa wysokość patrolu (pod HUD)
@@ -246,8 +250,9 @@ export const BOSS = {
   contactDamage: 30,
   bonus: 150,
   hitCooldownMs: 220, // min. odstęp między trafieniami tarczy
-  // nurkowanie: boss okresowo zjeżdża w zasięg gracza (by dało się go bić tarczą)
-  diveEveryMs: 4200,
+  // nurkowanie: boss okresowo zjeżdża w zasięg gracza (by dało się go bić tarczą).
+  // Częściej i wolniej = dłużej w zasięgu łuku tarczy, więc realnie wygrywalny.
+  diveEveryMs: 3200,
   diveY: 470,
-  diveSpeed: 230,
+  diveSpeed: 170,
 } as const;

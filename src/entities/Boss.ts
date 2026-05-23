@@ -9,6 +9,8 @@ import { TEXTURE } from "../art/SpriteTextures";
  */
 export class Boss extends Phaser.Physics.Arcade.Image {
   contactDamage = BOSS.contactDamage;
+  /** Promień ciała (kolizja) — zasięg trafień tarczą liczy się do POWIERZCHNI. */
+  readonly bodyRadius = 30;
   private hp = BOSS.hp;
   private mode: "enter" | "patrol" | "dive" | "return" = "enter";
   private dir = 1;
