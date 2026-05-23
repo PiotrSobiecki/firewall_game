@@ -311,6 +311,7 @@ export class GameScene extends Phaser.Scene {
     if (this.boss && this.boss.active) {
       this.boss.behave(time, (bx, by, vx) => this.fireBullet(bx, by, vx));
       this.damageBossWithShield(time);
+      this.damageBossWithShots();
     }
     // Ubój bossa wykonujemy TU (poza callbackiem kolizji) — bezpieczny destroy.
     if (this.bossKillPending) {
@@ -452,9 +453,9 @@ export class GameScene extends Phaser.Scene {
     this.bossSpawned = true;
     this.boss = new Boss(this, GAME_WIDTH / 2, -60);
     this.physics.add.overlap(this.player, this.boss, () => this.onBossContact());
-    this.physics.add.overlap(this.playerBullets, this.boss, (b) =>
-      this.onBossShot(b as Phaser.Physics.Arcade.Image),
-    );
+    // Strzały vs boss obsługujemy ręcznie w update() (damageBossWithShots) —
+    // collider grupa↔pojedynczy obiekt + disableBody w callbacku bywa zawodny
+    // w Phaserze 4 (trafienia się gubią). Tarcza już działa tak samo ręcznie.
     this.hud.flashBoss();
   }
 
@@ -476,11 +477,25 @@ export class GameScene extends Phaser.Scene {
     this.afterPlayerHit(this.player.x, this.player.y);
   }
 
-  private onBossShot(shot: Phaser.Physics.Arcade.Image): void {
-    if (this.ended || !shot.active || !this.boss?.active) return;
-    shot.disableBody(true, true);
-    this.burst.explode(4, shot.x, shot.y);
-    if (this.boss.takeShot()) this.bossKillPending = true;
+  /**
+   * Strzały gracza (PacketStream) vs boss — ręczny test odległości w update()
+   * zamiast collidera fizyki (ten gubił trafienia: grupa↔obiekt + disableBody
+   * w callbacku). Jedno trafienie na pocisk; po wyczerpaniu HP boss do uboju.
+   */
+  private damageBossWithShots(): void {
+    if (!this.boss || !this.boss.active) return;
+    const reach = this.boss.bodyRadius + PLAYER_SHOT.radius + 2;
+    for (const obj of this.playerBullets.getChildren()) {
+      const shot = obj as Phaser.Physics.Arcade.Image;
+      if (!shot.active) continue;
+      if (Phaser.Math.Distance.Between(shot.x, shot.y, this.boss.x, this.boss.y) > reach) continue;
+      shot.disableBody(true, true);
+      this.burst.explode(4, shot.x, shot.y);
+      if (this.boss.takeShot()) {
+        this.bossKillPending = true;
+        break;
+      }
+    }
   }
 
   /** Pokonanie mini-bossa → bonus, licznik PO BOSSIE 0/100, efekty. */
