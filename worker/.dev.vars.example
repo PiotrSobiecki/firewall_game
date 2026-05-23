@@ -1,0 +1,3 @@
+# Skopiuj do worker/.dev.vars (gitignored) na potrzeby `wrangler dev`.
+# W produkcji ustaw sekret: `wrangler secret put DATABASE_URL`
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb?sslmode=require"
