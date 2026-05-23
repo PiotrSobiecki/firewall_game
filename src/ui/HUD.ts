@@ -235,6 +235,27 @@ export class HUD {
     });
   }
 
+  /** Potwierdzenie zniszczenia mini-bossa — od teraz liczy się PO BOSSIE X/100. */
+  flashBossDefeated(): void {
+    const t = this.scene.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.28, "MINI-BOSS USUNIĘTY!\n+100 pkt do wygranej", {
+        fontFamily: "monospace",
+        fontSize: "20px",
+        color: COLOR_HEX.green,
+        fontStyle: "bold",
+        align: "center",
+      })
+      .setOrigin(0.5)
+      .setDepth(17);
+    this.scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      y: GAME_HEIGHT * 0.24,
+      duration: 1600,
+      onComplete: () => t.destroy(),
+    });
+  }
+
   /** Alarm wejścia mini-bossa. */
   flashBoss(): void {
     const t = this.scene.add

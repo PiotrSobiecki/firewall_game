@@ -12,6 +12,7 @@ import {
   PLAYER_SHOT,
   BOSS,
   TOUCH,
+  WIN_SCORE_AFTER_MINI_BOSS,
 } from "../config";
 import { Player } from "../entities/Player";
 import { Enemy } from "../entities/Enemy";
@@ -54,6 +55,8 @@ export class GameScene extends Phaser.Scene {
   private nextShotAt = 0;
   private boss?: Boss;
   private bossSpawned = false;
+  /** Czy mini-boss został już zaliczony (niezależnie od referencji this.boss). */
+  private bossDefeatCommitted = false;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"up" | "down" | "left" | "right", Phaser.Input.Keyboard.Key>;
@@ -123,6 +126,7 @@ export class GameScene extends Phaser.Scene {
     this.nextShotAt = 0;
     this.boss = undefined;
     this.bossSpawned = false;
+    this.bossDefeatCommitted = false;
 
     this.burst = this.add.particles(0, 0, TEXTURE.particle, {
       speed: { min: 50, max: 200 },
@@ -303,10 +307,20 @@ export class GameScene extends Phaser.Scene {
     this.spawner.update(time, elapsed);
     this.hud.setWave(this.spawner.waveNumber);
     this.hud.setObjective(this.score.score, this.run.bossDefeated, this.run.pointsAfterBoss);
+    this.tryEndWin();
+    if (this.ended) return;
     this.checkRunEnd();
   }
 
-  /** Sprawdza win/timeout zaraz po zmianie wyniku (nie czeka do końca klatki). */
+  /** Wygrana po bossie + 100 pkt (sprawdzane co klatkę i po każdym zabójstwie). */
+  private tryEndWin(): void {
+    if (this.ended || !this.started) return;
+    if (!this.run.bossDefeated) return;
+    if (this.run.pointsAfterBoss < WIN_SCORE_AFTER_MINI_BOSS) return;
+    this.end("win");
+  }
+
+  /** Sprawdza timeout (i ewentualnie win przez RunController). */
   private checkRunEnd(): void {
     if (this.ended || !this.started) return;
     const elapsed = this.time.now - this.startTime - this.pausedTotal;
@@ -314,15 +328,12 @@ export class GameScene extends Phaser.Scene {
     if (reason) this.end(reason);
   }
 
-  /** Po bossie: nalicz pkt i natychmiast zakończ rundę przy 100/100. */
+  /** Po bossie: nalicz pkt z ostatniego zabójstwa/fali i sprawdź wygraną. */
   private registerPostBossPoints(pts: number): void {
     if (!this.run.bossDefeated || pts <= 0) return;
-    if (this.run.addPointsAfterBoss(pts)) {
-      this.hud.setObjective(this.score.score, true, this.run.pointsAfterBoss);
-      this.end("win");
-      return;
-    }
+    this.run.addPointsAfterBoss(pts);
     this.hud.setObjective(this.score.score, this.run.bossDefeated, this.run.pointsAfterBoss);
+    this.tryEndWin();
   }
 
   /** Eliminacja wroga (tarcza lub strzał) → punkty (z combo) + efekty + drop. */
@@ -448,22 +459,29 @@ export class GameScene extends Phaser.Scene {
     if (this.boss.takeShot()) this.killBoss();
   }
 
-  /** Pokonanie bossa → duży bonus + efekt. (Boss jest do minięcia.) */
+  /** Pokonanie mini-bossa → bonus, licznik PO BOSSIE 0/100, efekty. */
   private killBoss(): void {
-    if (!this.boss) return;
-    const bx = this.boss.x;
-    const by = this.boss.y;
+    if (this.bossDefeatCommitted) return;
+
+    const bx = this.boss?.x ?? GAME_WIDTH / 2;
+    const by = this.boss?.y ?? BOSS.strafeY;
+    this.bossDefeatCommitted = true;
+
+    if (this.boss) {
+      this.boss.destroy();
+      this.boss = undefined;
+    }
+
     this.score.addBonus(BOSS.bonus);
     this.hud.setScore(this.score.score);
-    // Od teraz liczą się kolejne zabójstwa/fale — bonus bossa nie wlicza się do 100 pkt.
     this.run.onBossDefeated();
     this.hud.setObjective(this.score.score, true, 0);
-    this.checkRunEnd();
+    this.hud.flashBossDefeated();
+
     this.burst.explode(48, bx, by);
     this.cameras.main.shake(260, 0.014);
     this.cameras.main.flash(180, 255, 0, 170);
-    this.boss.destroy();
-    this.boss = undefined;
+    this.tryEndWin();
   }
 
   /** Przejście fali → bonus punktowy + sygnalizacja. */
@@ -603,8 +621,13 @@ export class GameScene extends Phaser.Scene {
     const data: EndData = {
       reason,
       score: this.score.score,
-      timeMs: this.time.now - this.startTime - this.pausedTotal,
+      timeMs: Math.max(0, this.time.now - this.startTime - this.pausedTotal),
     };
+    // Wygrana: od razu na ekran końcowy (bez ryzyka, że timer opóźnienia nie odpali).
+    if (reason === "win") {
+      this.scene.start("EndScene", data);
+      return;
+    }
     this.time.delayedCall(220, () => this.scene.start("EndScene", data));
   }
 }
