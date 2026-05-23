@@ -6,15 +6,15 @@ Mam utwór muzyczny **„Firewall" (3:15)** i chcę, żeby ludzie go usłyszeli 
 
 ## Solution
 
-Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro-neon, z motywem cyberbezpieczeństwa, w której utwór „Firewall" leci jako podkład (zapętlony, nigdy nieucinany). Gracz pilotuje **statek-tarczę** broniący sieci przed malware — rdzeniem nie jest strzelanie, lecz **odpychanie wrogów polem tarczy** (strzał to power-up, nie domyślny tryb). Runda kończy się wygraną (100 pkt), utratą 3 żyć albo limitem czasu (6:30 = 2 pętle utworu). Na ekranie końcowym zawsze jest wynik + **przycisk „Obejrzyj na YouTube"** prowadzący do utworu. Gra jest środkiem; muzyka jest celem.
+Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro-neon, z motywem cyberbezpieczeństwa, w której utwór „Firewall" leci jako podkład (zapętlony, nigdy nieucinany). Gracz pilotuje **statek-tarczę** broniący sieci przed malware — rdzeniem nie jest strzelanie, lecz **aktywowana tarcza**: gracz **przytrzymuje Spację**, by włączyć łuk tarczy nad statkiem, który odpycha i niszczy wrogów, ale **zużywa energię** (regeneruje się po puszczeniu). Kontakt z wrogiem **bez aktywnej tarczy** rani gracza (utrata HP). Strzał to power-up, nie domyślny tryb. Runda kończy się wygraną (100 pkt), utratą 3 żyć albo limitem czasu (6:30 = 2 pętle utworu). Na ekranie końcowym zawsze jest wynik + **przycisk „Obejrzyj na YouTube"** prowadzący do utworu. Gra jest środkiem; muzyka jest celem.
 
 ## User Stories
 
 ### Rdzeń rozgrywki
 1. Jako gracz chcę sterować statkiem-tarczą klawiaturą (← → / A D w poziomie, ↑ ↓ / W S w dozwolonej dolnej strefie), aby unikać i odpychać wrogów.
-2. Jako gracz chcę, aby moja tarcza była aktywna domyślnie i odpychała wrogów w jej promieniu, aby obrona była główną mechaniką bez konieczności strzelania.
-3. Jako gracz chcę nacisnąć Spację, aby wywołać „Pulse" (2× siła odpychu, cooldown ~1.5 s), aby ratować się w trudnej sytuacji.
-4. Jako gracz chcę, aby wrogowie w polu tarczy dostawali obrażenia i wektor odpychu, aby dało się ich eliminować bez broni.
+2. Jako gracz chcę **przytrzymać Spację, aby włączyć tarczę** (łuk nad statkiem) odpychającą i niszczącą wrogów, aby obrona była główną, aktywną mechaniką bez konieczności strzelania.
+3. Jako gracz chcę, aby tarcza **zużywała energię** podczas trzymania i regenerowała się po puszczeniu (z blokadą po pełnym wyczerpaniu), aby zarządzanie energią było częścią umiejętności.
+4. Jako gracz chcę, aby wrogowie w polu aktywnej tarczy dostawali obrażenia i wektor odpychu, a kontakt z wrogiem **bez aktywnej tarczy** zabierał mi HP, aby tarcza była realnie potrzebna.
 5. Jako gracz chcę widzieć wyraźną informację zwrotną przy trafieniu (screen shake, flash, particles), aby gra była „soczysta".
 
 ### Wrogowie (malware)
@@ -62,7 +62,7 @@ Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro
 ### Menu, HUD, jakość życia
 36. Jako gracz chcę ekranu startowego (START, HIGH SCORE), aby wejść w grę i zobaczyć rekordy.
 37. Jako gracz chcę widzieć na HUD pasek HP, licznik punktów z progresem do 100 oraz upływający czas — przy czym HP=100 i cel=100 mają być **wizualnie wyraźnie różne**, aby ich nie mylić.
-38. Jako gracz na urządzeniu mobilnym chcę zobaczyć komunikat „użyj klawiatury", aby wiedzieć, że v1 jest pod klawiaturę.
+38. Jako gracz na urządzeniu mobilnym chcę móc **grać dotykowo** (ruch statku + tarcza na dotyk), aby gra działała na telefonie. (ZMIANA ZAKRESU 2026-05-23 — wcześniej: tylko komunikat „użyj klawiatury". Szczegóły: GH issue #8.)
 39. Jako gracz chcę, aby gra zaczynała się od krótkiego ekranu ładowania (preload assetów), aby start był płynny.
 
 ### Estetyka
@@ -79,7 +79,7 @@ Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro
 - **Vite + TypeScript + Phaser 3**, build statyczny.
 - **Hosting: Cloudflare Pages** (statyczny `npm run build`). MVP **nie wymaga backendu ani bazy** — leaderboard w localStorage, muzyka jako asset statyczny, link YT przez `window.open`.
 - **Gdyby backend był potrzebny** (poza zakresem MVP): **Hono** na Cloudflare Workers + baza **Neon**. Dotyczy wyłącznie ewentualnego globalnego leaderboardu lub pomiaru konwersji (patrz Out of Scope / Further Notes).
-- Przeglądarka, **tylko klawiatura** w v1.
+- Przeglądarka: **klawiatura** (desktop) **oraz dotyk** (mobile, GH issue #8 — zmiana zakresu 2026-05-23).
 - Rozdzielczość logiczna 480×800 (portrait), `Scale.FIT`.
 - Testy czystej logiki: **Vitest** (bez renderu Phasera).
 
@@ -101,6 +101,8 @@ Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro
 
 ### Decyzje liczbowe (defaulty w konfiguracji, do tuningu w playteście)
 - Wygrana: 100 pkt. Limit: 6:30 (2× pętla 3:15). Życia: 3. HP/życie: 100.
+- Tarcza (na przytrzymanie Spacji): promień ~80 px, łuk ±82° od pionu w górę, odpych ~360, obrażenia ~7/s. Energia: max 100, drenaż ~42/s (≈2.4 s ciągłej tarczy), regen ~24/s, blokada po wyczerpaniu aż do ~28% naładowania.
+- Kontakt z wrogiem bez tarczy: Virus ~22 HP obrażeń; i-frames gracza ~0.9 s.
 - Punkty: Virus 10, Trojan 20, Worm/Spyware 15, przejście fali +25, mini-boss +30.
 - Combo: okno 2 s, mnożnik do ×3.
 - Kara za śmierć: −15 pkt + reset combo (czas bez zmian).
@@ -119,7 +121,8 @@ Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro
 - UI po polsku („START", „WYNIK", „KONIEC GRY").
 
 ### Zasady spójności (dla implementujących)
-- Tarcza domyślna; strzał wyłącznie jako power-up — **nigdy** domyślny auto-fire.
+- Tarcza **aktywowana przez przytrzymanie Spacji** (energia, łuk nad statkiem) — NIE domyślnie włączona. Kontakt bez tarczy rani gracza. Strzał wyłącznie jako power-up — **nigdy** domyślny auto-fire.
+- Tarcza startowo **mała**; jej zasięg/skuteczność **rośnie wyłącznie przez bonusy** (power-up ShieldBoost) — bazowy rozmiar ma być wymagający, a power-upy mają dawać odczuwalną nagrodę.
 - Nowi wrogowie = metafora malware (nazwa + zachowanie opisane w komentarzu).
 - Bez zmiany motywu na generic space.
 - Każda nowa mechanika musi przejść test „czy da się wygrać w ~2–4 min".
@@ -162,7 +165,7 @@ Krótka (2–6 min) przeglądarkowa gra arcade **shoot-'em-up** w estetyce retro
 
 ## Out of Scope
 
-- Sterowanie dotykowe / mobilne (v1 = tylko klawiatura; mobile dostaje jedynie komunikat).
+- ~~Sterowanie dotykowe / mobilne~~ — **przeniesione do zakresu (2026-05-23), GH issue #8.** Gra ma być grywalna dotykowo na telefonie (ruch + tarcza na dotyk), obok klawiatury na desktopie.
 - Tryb endless / długie sesje 20+ min.
 - Rozbudowany system bossów (wiele faz, raidy, `bosses.json`) — w MVP tylko jeden mini-boss przy 90 pkt.
 - Zewnętrzne assety graficzne / sprite sheety (wszystko proceduralne).

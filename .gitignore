@@ -9,6 +9,10 @@ dist-ssr/
 # Vite / cache
 .vite/
 
+# Test / dev artifacts
+coverage/
+shots/
+
 # Logs
 *.log
 npm-debug.log*

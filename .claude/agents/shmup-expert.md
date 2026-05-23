@@ -23,8 +23,8 @@ This game is a **promo / music piece** for the track **"Firewall" (3:15)**. The 
 | Aspect | Decision |
 |---|---|
 | Genre | Top-down arcade shmup, cybersecurity theme (malware enemies) |
-| Core mechanic | **Shield + knockback by default**; shooting is a *power-up*, never default auto-fire |
-| Player | Bottom zone, X + light Y movement; `Space` = Pulse (2× knockback, ~1.5s cooldown) |
+| Core mechanic | **Shield activated by holding `Space`** (NOT default-on). Active shield = an arc above the ship that knocks back + damages enemies in its sector, but drains an **energy bar** (regenerates when released). Contact with an enemy **without an active shield → player loses HP**. Shooting is a *power-up*, never default auto-fire. |
+| Player | Bottom zone, X + light Y movement; **hold `Space` = shield (energy-gated, arc above ship)**. No always-on shield ring. |
 | Win | Reach **100 points** |
 | Lives | **3 lives**. Each life = **HP 100**, fully restored on respawn |
 | Respawn cost | **−points + combo reset** (NO time change). After 3rd death → game over |
@@ -35,7 +35,7 @@ This game is a **promo / music piece** for the track **"Firewall" (3:15)**. The 
 | Leaderboard | Winners ranked by **time** (faster = better); timeouts ranked by **points** |
 | End screen | Score + reason + **"Obejrzyj na YouTube"** button (`window.open`, `rel=noopener`) + Retry |
 | Enemies | Virus, Trojan, Worm, Spyware (each a malware metaphor in name + behavior) |
-| Platform | Browser, keyboard only (no touch in v1) |
+| Platform | Browser. Keyboard (desktop) **+ touch controls (mobile)** — scope change 2026-05-23, see GH issue #8. Both inputs coexist. |
 | Aesthetic | Retro neon grid on `#0a0e17`; cyan `#00f0ff`, magenta `#ff00aa`, warn `#ffcc00`, ok `#00ff88`; scanline overlay; pixel font (Press Start 2P) |
 | Resolution | Logical 480×800 portrait, `Scale.FIT` |
 | UI language | Polish ("START", "WYNIK", "KONIEC GRY") |

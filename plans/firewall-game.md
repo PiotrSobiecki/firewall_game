@@ -7,14 +7,14 @@
 Trwałe decyzje obowiązujące we wszystkich fazach:
 
 - **Architecture style**: statyczna gra przeglądarkowa, Vite + TypeScript + Phaser 3 (Arcade physics). Brak backendu i bazy w MVP. Hosting: Cloudflare Pages.
-- **Rdzeń mechaniki**: tarcza + odpych domyślnie; strzał wyłącznie jako power-up (nigdy domyślny auto-fire).
+- **Rdzeń mechaniki** (AKTUALIZACJA 2026-05-23): tarcza **aktywowana przytrzymaniem Spacji** (NIE domyślna), łuk nad statkiem, zużywa energię (regen po puszczeniu). Tarcza **bazowo mała**, powiększana wyłącznie bonusem ShieldBoost. Kontakt z wrogiem bez tarczy rani HP. Strzał wyłącznie jako power-up (nigdy domyślny auto-fire).
 - **Moduły głębokie (czysta logika, testowalne Vitest bez Phasera)**: ScoreSystem, RunController, DifficultyCurve, Leaderboard.
 - **Moduły sprzężone z Phaserem (weryfikacja wizualna)**: ShieldSystem, SpawnSystem, PowerUpSystem, AudioSystem, HUD/RetroGridBackground.
 - **Kluczowe encje**: Player (statek-tarcza), Enemy (Virus/Trojan/Worm/Spyware), Boss (mini), PowerUp, Wave, RunResult (wynik + czas + powód końca), LeaderboardEntry.
 - **Stany końcowe rundy**: win @100 pkt · death @3 życia · timeout @6:30 (2 pętle tracku).
 - **Konfiguracja**: stałe balansu, `YOUTUBE_URL`, ścieżka audio — w jednym miejscu konfiguracyjnym, do tuningu/podmiany.
 - **Persystencja**: localStorage (leaderboard, mute). Brak online.
-- **Estetyka**: retro neon grid na `#0a0e17` (cyan/magenta/żółty/zielony), scanline, proceduralne kształty, pixel font, UI po polsku. 480×800 portrait, `Scale.FIT`. Tylko klawiatura.
+- **Estetyka**: retro neon grid na `#0a0e17` (cyan/magenta/żółty/zielony), scanline, proceduralne kształty, pixel font, UI po polsku. 480×800 portrait, `Scale.FIT`. Klawiatura (desktop) + sterowanie dotykowe (mobile, GH issue #8 — zmiana zakresu 2026-05-23). Dev po LAN: `npm run dev` (server.host=true) → `http://<IP>:5173`.
 - **Stack na zapas (poza MVP)**: gdyby wszedł globalny leaderboard lub pomiar konwersji → Hono na CF Workers + Neon.
 
 ---
@@ -25,7 +25,7 @@ Trwałe decyzje obowiązujące we wszystkich fazach:
 
 ### What to build
 
-Kompletna, grywalna pętla end-to-end: ekran ładowania → minimalne menu (START) → rozgrywka → ekran końcowy. Gracz steruje statkiem-tarczą (poziom + lekki pion w dolnej strefie); tarcza jest aktywna domyślnie i odpycha oraz rani wrogów w promieniu; Spacja wywołuje Pulse (wzmocniony odpych z cooldownem). Na planszy spawnuje się jeden typ wroga (Virus) lecący w dół; eliminacja daje punkty; osiągnięcie 100 pkt = wygrana, kontakt zabójczy = koniec. Tło to animowana siatka neon ze scanline; trafienia mają screen shake i flash. Ekran końcowy pokazuje wynik, przycisk „Zagraj jeszcze raz" i przycisk „Obejrzyj na YouTube" (URL z konfiguracji, nowa karta).
+Kompletna, grywalna pętla end-to-end: ekran ładowania → minimalne menu (START) → rozgrywka → ekran końcowy. Gracz steruje statkiem-tarczą (poziom + lekki pion w dolnej strefie); tarcza NIE jest domyślna — gracz **przytrzymuje Spację**, by włączyć **łuk tarczy nad statkiem** (zużywa energię, regen po puszczeniu), który odpycha i niszczy wrogów. Tarcza jest **bazowo mała** (powiększana wyłącznie bonusem ShieldBoost). Kontakt z wrogiem **bez aktywnej tarczy** zabiera HP (i-frames); 0 HP = porażka. Na planszy spawnuje się jeden typ wroga (Virus) lecący w dół; eliminacja daje punkty; osiągnięcie 100 pkt = wygrana. Tło to animowana siatka neon ze scanline; trafienia mają screen shake i flash. Ekran końcowy pokazuje wynik, przycisk „Zagraj jeszcze raz" i przycisk „Obejrzyj na YouTube" (URL z konfiguracji, nowa karta).
 
 ### Acceptance criteria
 
@@ -85,7 +85,7 @@ Wprowadzenie zróżnicowanych wrogów i napędu trudności. SpawnSystem czyta de
 
 ### What to build
 
-System power-upów wpięty w rozgrywkę: wrogowie z szansą ~12% upuszczają power-up, który gracz zbiera. PacketStream włącza chwilowy auto-fire w przód (jedyny tryb strzału w grze). Immunity daje chwilową nieśmiertelność z aurą, bez konfliktu z i-frames. ShieldBoost zwiększa promień i obrażenia tarczy. FirewallRepair przywraca HP. Każdy buff ma własny timer i czytelną sygnalizację.
+System power-upów wpięty w rozgrywkę: wrogowie z szansą ~12% upuszczają power-up, który gracz zbiera. PacketStream włącza chwilowy auto-fire w przód (jedyny tryb strzału w grze). Immunity daje chwilową nieśmiertelność z aurą, bez konfliktu z i-frames. ShieldBoost **znacząco powiększa bazowo małą tarczę** (większy promień/łuk) i podwaja jej obrażenia — to kluczowy bonus, bo bazowa tarcza jest celowo mała. FirewallRepair przywraca HP. Każdy buff ma własny timer i czytelną sygnalizację.
 
 ### Acceptance criteria
 

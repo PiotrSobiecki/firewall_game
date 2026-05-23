@@ -1,0 +1,9 @@
+{
+  "waves": [
+    { "durationMs": 14000, "spawnIntervalMs": 1000, "types": ["virus", "virus", "virus"] },
+    { "durationMs": 16000, "spawnIntervalMs": 950, "types": ["virus", "virus", "worm"] },
+    { "durationMs": 18000, "spawnIntervalMs": 950, "types": ["virus", "worm", "trojan"] },
+    { "durationMs": 20000, "spawnIntervalMs": 900, "types": ["virus", "worm", "spyware", "trojan"] },
+    { "durationMs": 22000, "spawnIntervalMs": 850, "types": ["virus", "worm", "worm", "spyware", "trojan"] }
+  ]
+}

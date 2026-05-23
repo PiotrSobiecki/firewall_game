@@ -1,0 +1,472 @@
+import Phaser from "phaser";
+import { COLORS } from "../config";
+
+/** Klucze tekstur generowanych w BootScene. */
+export const TEXTURE = {
+  player: "player",
+  virus: "virus",
+  trojan: "trojan",
+  worm: "worm",
+  spyware: "spyware",
+  bullet: "bullet",
+  playerBullet: "playerBullet",
+  puPacket: "pu_packet",
+  puImmunity: "pu_immunity",
+  puShield: "pu_shield",
+  puRepair: "pu_repair",
+  particle: "particle",
+} as const;
+
+export const SPRITE = {
+  player: { w: 56, h: 56 },
+  virus: { w: 32, h: 32 },
+  trojan: { w: 44, h: 44 },
+  worm: { w: 36, h: 36 },
+  spyware: { w: 36, h: 36 },
+  bullet: { w: 12, h: 12 },
+  playerBullet: { w: 12, h: 16 },
+  powerup: { w: 28, h: 28 },
+  particle: { w: 10, h: 10 },
+} as const;
+
+const DARK = 0x1a2238;
+const SHIELD_FILL = 0x0d3d4a;
+const VIRUS_CORE = 0xcc0066;
+const VIRUS_EDGE = 0x660033;
+
+/**
+ * Proceduralne sprite'y w stylu arcade cyber — bez zewnętrznych assetów.
+ * Gracz = statek-tarcza (heraldyczna tarcza + kadłub), nie strzałka.
+ * Virus = kolczasty blob malware z „złośliwymi” oczami.
+ */
+export function registerGameTextures(scene: Phaser.Scene): void {
+  createPlayerTexture(scene);
+  createVirusTexture(scene);
+  createTrojanTexture(scene);
+  createWormTexture(scene);
+  createSpywareTexture(scene);
+  createBulletTexture(scene);
+  createPlayerBulletTexture(scene);
+  createPowerUpTextures(scene);
+  createParticleTexture(scene);
+}
+
+/** Heraldyczny kontur tarczy jako lista wierzchołków (Phaser 4: Vector2). */
+function shieldOutline(
+  cx: number,
+  topY: number,
+  halfW: number,
+  shoulderY: number,
+  hipY: number,
+  tipY: number,
+): Phaser.Math.Vector2[] {
+  return [
+    new Phaser.Math.Vector2(cx, topY),
+    new Phaser.Math.Vector2(cx + halfW, shoulderY),
+    new Phaser.Math.Vector2(cx + halfW * 0.85, hipY),
+    new Phaser.Math.Vector2(cx, tipY),
+    new Phaser.Math.Vector2(cx - halfW * 0.85, hipY),
+    new Phaser.Math.Vector2(cx - halfW, shoulderY),
+  ];
+}
+
+/** Świecący „płomień” firewall jako rdzeń statku (czytelny w skali ~14px). */
+function drawFirewallCore(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+): void {
+  // poświata
+  g.fillStyle(COLORS.green, 0.22);
+  g.fillCircle(cx, cy, 10);
+
+  // sześciokątny rdzeń (energetyczny zamek), ciemne tło pod symbol
+  const hex: Phaser.Math.Vector2[] = [];
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i - Math.PI / 2;
+    hex.push(new Phaser.Math.Vector2(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8));
+  }
+  g.fillStyle(0x06241c, 1);
+  g.fillPoints(hex, true, true);
+  g.lineStyle(1.5, COLORS.green, 1);
+  g.strokePoints(hex, true, true);
+
+  // stylizowany płomień (trzy języki) — symbol „firewall”
+  g.fillStyle(COLORS.green, 1);
+  g.fillTriangle(cx, cy - 6, cx - 4, cy + 4, cx + 4, cy + 4); // główny język
+  g.fillStyle(COLORS.yellow, 1);
+  g.fillTriangle(cx, cy - 2, cx - 2.4, cy + 4, cx + 2.4, cy + 4); // gorący rdzeń
+  g.fillStyle(0xffffff, 0.95);
+  g.fillTriangle(cx, cy + 0.5, cx - 1.1, cy + 4, cx + 1.1, cy + 4); // biały blik
+}
+
+function createPlayerTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.player;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+
+  // --- Skrzydła / stabilizatory (za kadłubem, magenta) ---
+  // skośne panele myśliwca, zintegrowane przy „ramionach” tarczy
+  const wing = (s: number) => {
+    const pts = [
+      new Phaser.Math.Vector2(cx + s * 10, 20),
+      new Phaser.Math.Vector2(cx + s * 27, 27),
+      new Phaser.Math.Vector2(cx + s * 25, 35),
+      new Phaser.Math.Vector2(cx + s * 12, 38),
+    ];
+    g.fillStyle(0x2a0a22, 1);
+    g.fillPoints(pts, true, true);
+    g.lineStyle(2, COLORS.magenta, 0.95);
+    g.strokePoints(pts, true, true);
+    // świecąca krawędź natarcia
+    g.lineStyle(1, COLORS.magenta, 0.5);
+    g.lineBetween(cx + s * 12, 24, cx + s * 24, 29);
+  };
+  wing(-1);
+  wing(1);
+
+  // --- Silniki + poświata (dolny segment, pod tarczą) ---
+  g.fillStyle(COLORS.cyan, 0.16);
+  g.fillEllipse(cx, h - 4, 30, 12);
+  // obudowa dysz
+  g.fillStyle(DARK, 1);
+  g.fillRoundedRect(cx - 12, h - 16, 24, 11, 3);
+  g.lineStyle(2, COLORS.cyan, 0.9);
+  g.strokeRoundedRect(cx - 12, h - 16, 24, 11, 3);
+  // płomienie dysz (cyan→żółty→biały)
+  for (const ox of [-7, 7]) {
+    g.fillStyle(COLORS.yellow, 0.55);
+    g.fillEllipse(cx + ox, h - 4, 8, 8);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillEllipse(cx + ox, h - 6, 3, 5);
+  }
+
+  // --- Tarcza heraldyczna ---
+  const outline = shieldOutline(cx, 3, 21, 16, 35, 47);
+  // poświata konturu
+  g.lineStyle(5, COLORS.cyan, 0.18);
+  g.strokePoints(outline, true, true);
+  // korpus (gradient imitowany dwiema warstwami)
+  g.fillStyle(DARK, 1);
+  g.fillPoints(outline, true, true);
+  g.fillStyle(SHIELD_FILL, 0.9);
+  g.fillPoints(shieldOutline(cx, 7, 16, 18, 32, 42), true, true);
+  // wewnętrzny połysk (lewa górna połać)
+  g.fillStyle(COLORS.cyan, 0.14);
+  g.fillTriangle(cx, 9, cx, 34, cx - 14, 18);
+  // mocny kontur zewnętrzny
+  g.lineStyle(2.5, COLORS.cyan, 1);
+  g.strokePoints(outline, true, true);
+  // techniczne linie korpusu
+  g.lineStyle(1, COLORS.cyan, 0.35);
+  g.lineBetween(cx - 13, 22, cx + 13, 22);
+  g.lineBetween(cx, 36, cx, 44);
+
+  // --- Rdzeń firewall (świecący płomień w centrum) ---
+  drawFirewallCore(g, cx, 23);
+
+  g.generateTexture(TEXTURE.player, w, h);
+  g.destroy();
+}
+
+/** Kolce wokół bloba — czytelny „wirus” na małym sprite. */
+function drawSpikyBlob(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  baseR: number,
+  spikes: number,
+  spikeLen: number,
+): void {
+  const steps = spikes * 2;
+  g.beginPath();
+  for (let i = 0; i < steps; i++) {
+    const a = (Math.PI * 2 * i) / steps - Math.PI / 2;
+    const r = i % 2 === 0 ? baseR + spikeLen : baseR;
+    const x = cx + Math.cos(a) * r;
+    const y = cy + Math.sin(a) * r;
+    if (i === 0) g.moveTo(x, y);
+    else g.lineTo(x, y);
+  }
+  g.closePath();
+  g.fillPath();
+}
+
+function createVirusTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.virus;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2 + 1;
+
+  // --- Poświata zagrożenia ---
+  g.fillStyle(COLORS.magenta, 0.18);
+  drawSpikyBlob(g, cx, cy, 12, 9, 4);
+
+  // --- Anteny / flagelle (za ciałem, „macki” malware) ---
+  g.lineStyle(2, COLORS.magenta, 0.95);
+  g.lineBetween(cx - 8, cy - 7, cx - 13, cy - 14);
+  g.lineBetween(cx + 8, cy - 7, cx + 13, cy - 14);
+  g.lineBetween(cx, cy - 9, cx, cy - 16);
+  g.fillStyle(COLORS.yellow, 1);
+  g.fillCircle(cx - 13, cy - 14, 2);
+  g.fillCircle(cx + 13, cy - 14, 2);
+  g.fillCircle(cx, cy - 16, 2);
+
+  // --- Kontur kolczasty (ciemny obrys) ---
+  g.fillStyle(VIRUS_EDGE, 1);
+  drawSpikyBlob(g, cx, cy, 11, 9, 5);
+
+  // --- Ciało (jadowita magenta) ---
+  g.fillStyle(VIRUS_CORE, 1);
+  drawSpikyBlob(g, cx, cy, 9, 9, 3.5);
+
+  // --- Korupcja kodu (glitch-piksele) ---
+  g.fillStyle(COLORS.yellow, 0.9);
+  g.fillRect(cx - 8, cy - 4, 3, 2);
+  g.fillRect(cx + 5, cy + 4, 4, 2);
+  g.fillRect(cx - 2, cy + 6, 2, 2);
+  g.fillStyle(COLORS.green, 0.7);
+  g.fillRect(cx + 6, cy - 5, 2, 2);
+  g.fillRect(cx - 7, cy + 3, 2, 2);
+
+  // --- Złowrogie oczy: kanciaste, świecące, zmrużone ---
+  // ciemne oczodoły
+  g.fillStyle(0x1a0010, 1);
+  g.fillTriangle(cx - 8, cy - 3, cx - 1, cy - 3, cx - 5, cy + 2);
+  g.fillTriangle(cx + 8, cy - 3, cx + 1, cy - 3, cx + 5, cy + 2);
+  // świecące żółte źrenice
+  g.fillStyle(COLORS.yellow, 1);
+  g.fillTriangle(cx - 7, cy - 2, cx - 2, cy - 2, cx - 4.5, cy + 1);
+  g.fillTriangle(cx + 7, cy - 2, cx + 2, cy - 2, cx + 4.5, cy + 1);
+  // ostre błyski
+  g.fillStyle(0xffffff, 0.9);
+  g.fillRect(cx - 5, cy - 2, 1, 1);
+  g.fillRect(cx + 4, cy - 2, 1, 1);
+
+  // --- Wyszczerzona „paszcza” ---
+  g.lineStyle(1.5, 0x1a0010, 1);
+  g.lineBetween(cx - 4, cy + 5, cx + 4, cy + 5);
+  g.fillStyle(0x1a0010, 1);
+  g.fillTriangle(cx - 3, cy + 5, cx - 1, cy + 5, cx - 2, cy + 7);
+  g.fillTriangle(cx + 1, cy + 5, cx + 3, cy + 5, cx + 2, cy + 7);
+
+  g.generateTexture(TEXTURE.virus, w, h);
+  g.destroy();
+}
+
+/** Trojan — opancerzony „blok" malware z fałszywą ikoną prezentu/pakietu. */
+function createTrojanTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.trojan;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2;
+
+  // poświata zagrożenia
+  g.fillStyle(COLORS.yellow, 0.12);
+  g.fillCircle(cx, cy, 20);
+
+  // sześciokątny pancerz
+  const hex = (r: number): Phaser.Math.Vector2[] => {
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i;
+      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * r, cy + Math.sin(a) * r));
+    }
+    return pts;
+  };
+  g.fillStyle(0x3a2a0a, 1);
+  g.fillPoints(hex(18), true, true);
+  g.lineStyle(2.5, COLORS.yellow, 0.95);
+  g.strokePoints(hex(18), true, true);
+  g.lineStyle(1, COLORS.yellow, 0.4);
+  g.strokePoints(hex(12), true, true);
+
+  // nity pancerza
+  g.fillStyle(COLORS.yellow, 0.8);
+  for (let i = 0; i < 6; i++) {
+    const a = (Math.PI / 3) * i + Math.PI / 6;
+    g.fillCircle(cx + Math.cos(a) * 14, cy + Math.sin(a) * 14, 1.6);
+  }
+
+  // fałszywa „ikona pakietu" (koń trojański = ukryta groźba): wstążka prezentu
+  g.lineStyle(2, COLORS.magenta, 0.9);
+  g.lineBetween(cx - 9, cy, cx + 9, cy);
+  g.lineBetween(cx, cy - 9, cx, cy + 9);
+  // złe oczy w szczelinie pancerza
+  g.fillStyle(COLORS.magenta, 1);
+  g.fillRect(cx - 7, cy - 3, 4, 2);
+  g.fillRect(cx + 3, cy - 3, 4, 2);
+
+  g.generateTexture(TEXTURE.trojan, w, h);
+  g.destroy();
+}
+
+/** Worm — segmentowy robak sieciowy, wije się; głowa z przodu (u dołu). */
+function createWormTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.worm;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+
+  // poświata
+  g.fillStyle(COLORS.green, 0.12);
+  g.fillCircle(cx, h / 2, 16);
+
+  // segmenty (od ogona u góry do głowy u dołu)
+  const segs = [
+    { y: 8, r: 5 },
+    { y: 15, r: 6 },
+    { y: 22, r: 7 },
+    { y: 29, r: 8 },
+  ];
+  for (const s of segs) {
+    g.fillStyle(0x0a3322, 1);
+    g.fillCircle(cx, s.y, s.r);
+    g.lineStyle(1.5, COLORS.green, 0.9);
+    g.strokeCircle(cx, s.y, s.r);
+  }
+  // głowa
+  g.fillStyle(COLORS.green, 0.9);
+  g.fillCircle(cx, 29, 4);
+  // oczy głowy
+  g.fillStyle(0x06140d, 1);
+  g.fillCircle(cx - 2.5, 29, 1.4);
+  g.fillCircle(cx + 2.5, 29, 1.4);
+
+  g.generateTexture(TEXTURE.worm, w, h);
+  g.destroy();
+}
+
+/** Spyware — „oko-kamera" inwigilacji, strzela pakietami danych. */
+function createSpywareTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.spyware;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2;
+
+  // poświata
+  g.fillStyle(COLORS.cyan, 0.12);
+  g.fillCircle(cx, cy, 17);
+
+  // obudowa oka (migdał)
+  g.fillStyle(0x0a2630, 1);
+  g.fillEllipse(cx, cy, 30, 20);
+  g.lineStyle(2, COLORS.cyan, 0.95);
+  g.strokeEllipse(cx, cy, 30, 20);
+
+  // tęczówka
+  g.fillStyle(COLORS.magenta, 0.85);
+  g.fillCircle(cx, cy, 7);
+  // źrenica
+  g.fillStyle(0x06140d, 1);
+  g.fillCircle(cx, cy, 4);
+  g.fillStyle(0xffffff, 0.9);
+  g.fillCircle(cx - 1.5, cy - 1.5, 1.4);
+  // skan-linia (inwigilacja)
+  g.lineStyle(1, COLORS.cyan, 0.5);
+  g.lineBetween(cx - 14, cy, cx + 14, cy);
+
+  g.generateTexture(TEXTURE.spyware, w, h);
+  g.destroy();
+}
+
+/** Pakiet-pocisk Spyware. */
+function createBulletTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.bullet;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2;
+  g.fillStyle(COLORS.magenta, 0.3);
+  g.fillCircle(cx, cy, 6);
+  g.fillStyle(COLORS.magenta, 1);
+  g.fillCircle(cx, cy, 3.5);
+  g.fillStyle(0xffffff, 0.9);
+  g.fillCircle(cx, cy, 1.5);
+  g.generateTexture(TEXTURE.bullet, w, h);
+  g.destroy();
+}
+
+/** Pocisk gracza (PacketStream) — świecący bełt cyan lecący w górę. */
+function createPlayerBulletTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.playerBullet;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  g.fillStyle(COLORS.cyan, 0.3);
+  g.fillEllipse(cx, h / 2, w, h);
+  g.fillStyle(COLORS.cyan, 1);
+  g.fillTriangle(cx, 1, w - 2, h - 3, 2, h - 3);
+  g.fillStyle(0xffffff, 0.9);
+  g.fillTriangle(cx, 3, cx + 2.5, h - 6, cx - 2.5, h - 6);
+  g.generateTexture(TEXTURE.playerBullet, w, h);
+  g.destroy();
+}
+
+/** Power-upy: kapsuła w kolorze typu z czytelnym symbolem. */
+function createPowerUpTextures(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.powerup;
+  const cx = w / 2;
+  const cy = h / 2;
+
+  const make = (key: string, color: number, glyph: (g: Phaser.GameObjects.Graphics) => void) => {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(color, 0.16);
+    g.fillCircle(cx, cy, 13);
+    g.fillStyle(0x0d1622, 1);
+    g.fillRoundedRect(3, 3, w - 6, h - 6, 6);
+    g.lineStyle(2, color, 0.95);
+    g.strokeRoundedRect(3, 3, w - 6, h - 6, 6);
+    g.fillStyle(color, 1);
+    g.lineStyle(2, color, 1);
+    glyph(g);
+    g.generateTexture(key, w, h);
+    g.destroy();
+  };
+
+  // PacketStream — dwa szewrony w górę (ofensywa)
+  make(TEXTURE.puPacket, COLORS.magenta, (g) => {
+    g.fillTriangle(cx, 7, cx - 6, 14, cx + 6, 14);
+    g.fillTriangle(cx, 13, cx - 6, 20, cx + 6, 20);
+  });
+  // Immunity — gwiazda/błysk (nietykalność)
+  make(TEXTURE.puImmunity, COLORS.cyan, (g) => {
+    g.lineBetween(cx, 6, cx, h - 6);
+    g.lineBetween(7, cy, w - 7, cy);
+    g.lineBetween(9, 9, w - 9, h - 9);
+    g.lineBetween(w - 9, 9, 9, h - 9);
+  });
+  // ShieldBoost — sześciokąt (większa tarcza)
+  make(TEXTURE.puShield, COLORS.yellow, (g) => {
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (Math.PI / 3) * i - Math.PI / 2;
+      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * 7, cy + Math.sin(a) * 7));
+    }
+    g.strokePoints(pts, true, true);
+  });
+  // FirewallRepair — plus (leczenie)
+  make(TEXTURE.puRepair, COLORS.green, (g) => {
+    g.fillRect(cx - 2, 7, 4, h - 14);
+    g.fillRect(7, cy - 2, w - 14, 4);
+  });
+}
+
+function createParticleTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.particle;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const cx = w / 2;
+  const cy = h / 2;
+
+  g.fillStyle(0xffffff, 1);
+  g.beginPath();
+  g.moveTo(cx, 0);
+  g.lineTo(w, cy);
+  g.lineTo(cx, h);
+  g.lineTo(0, cy);
+  g.closePath();
+  g.fillPath();
+
+  g.fillStyle(COLORS.cyan, 0.5);
+  g.fillCircle(cx, cy, 2);
+
+  g.generateTexture(TEXTURE.particle, w, h);
+  g.destroy();
+}
