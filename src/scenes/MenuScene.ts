@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
     this.marquee = undefined;
 
     this.highText = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "BEST FIREWALL ADMIN: —", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "TOP DEFENDER: —", {
         fontFamily: "monospace",
         fontSize: "14px",
         color: COLOR_HEX.green,
@@ -95,7 +95,7 @@ export class MenuScene extends Phaser.Scene {
     } catch {
       return; // brak sieci → HIGH SCORE zostaje „—", brak paska
     }
-    this.highText.setText(`BEST FIREWALL ADMIN: ${topName(list) || "—"}`);
+    this.highText.setText(`TOP DEFENDER: ${topName(list) || "—"}`);
 
     const top = topEntries(list);
     if (top.length === 0) return;
