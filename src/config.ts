@@ -5,7 +5,7 @@
  * Wartość pokazywana na HUD jako orientacyjny cel/progres. NIE jest już sama
  * w sobie warunkiem wygranej — patrz WIN_SCORE_AFTER_BOSS i RunController.
  */
-export const TARGET_SCORE = 1200;
+export const TARGET_SCORE = 900;
 
 /**
  * Wygrana (zmiana 2026-05-23): nie wystarczy próg punktów. Trzeba pokonać
@@ -50,7 +50,8 @@ export const LEADERBOARD_SIZE = 10;
  * w produkcji ustaw `VITE_API_BASE` na URL workera; lokalnie domyślnie
  * `wrangler dev` na :8787. Bez sieci ranking jest niedostępny.
  */
-export const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
+export const API_BASE =
+  import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
 
 /** Link do utworu na YouTube — podmienić przed publikacją. */
 export const YOUTUBE_URL = "https://www.youtube.com/watch?v=fiKG2Yb9goc";
