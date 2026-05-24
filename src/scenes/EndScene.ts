@@ -22,9 +22,7 @@ const RANKING_TOP_Y = 150;
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${(ms / 1000).toFixed(2)}s`;
 }
 
 /** Ekran końcowy: wynik + globalny ranking TOP 10 (z wpisem imienia) + retry + YouTube. */
@@ -146,7 +144,7 @@ export class EndScene extends Phaser.Scene {
       if (isMine) highlighted = true;
       const rank = (i + 1).toString().padStart(2, " ");
       const name = e.name.slice(0, 11).padEnd(11, " ");
-      const timeCol = (e.reason === "win" ? formatTime(e.timeMs) : "—").padStart(5, " ");
+      const timeCol = (e.reason === "win" ? formatTime(e.timeMs) : "—").padStart(8, " ");
       const score = e.score.toString().padStart(4, " ");
       const color = isMine ? COLOR_HEX.yellow : e.reason === "win" ? COLOR_HEX.green : COLOR_HEX.cyan;
       this.add

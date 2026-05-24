@@ -7,9 +7,7 @@ import { MusicController } from "../systems/MusicController";
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${(ms / 1000).toFixed(2)}s`;
 }
 
 const MARQUEE_SPEED = 70; // px/s
