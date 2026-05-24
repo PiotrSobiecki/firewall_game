@@ -56,3 +56,21 @@ export function highScore(list: RunResult[]): number {
 export function topName(list: RunResult[]): string {
   return sortEntries(list)[0]?.name ?? "";
 }
+
+/**
+ * Czy dwa wpisy to ta sama runda (np. wpis gracza po zapisie do API).
+ * Serwer zaokrągla score/timeMs — porównanie musi być tolerancyjne.
+ */
+export function isSameRun(a: RunResult, b: RunResult): boolean {
+  return (
+    a.name === b.name &&
+    a.reason === b.reason &&
+    Math.abs(Math.round(a.score) - Math.round(b.score)) <= 1 &&
+    Math.abs(Math.round(a.timeMs) - Math.round(b.timeMs)) <= 1
+  );
+}
+
+/** Indeks wpisu gracza na liście TOP (lub -1). */
+export function findPlayerIndex(list: RunResult[], mine: RunResult): number {
+  return list.findIndex((e) => isSameRun(e, mine));
+}

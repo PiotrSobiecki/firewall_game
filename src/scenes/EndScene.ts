@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, YOUTUBE_URL, LEADERBOARD_SIZE } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
-import { qualifies, topEntries, type RunResult } from "../systems/ranking";
+import { findPlayerIndex, qualifies, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores, submitScore } from "../systems/scoreApi";
 import { MusicController } from "../systems/MusicController";
 
@@ -82,14 +82,19 @@ export class EndScene extends Phaser.Scene {
 
     if (qualifies(top, result)) {
       this.promptName(async (name) => {
-        result.name = name;
+        const mine: RunResult = {
+          ...result,
+          name,
+          score: Math.round(result.score),
+          timeMs: Math.round(result.timeMs),
+        };
         try {
-          await submitScore(result);
+          await submitScore(mine);
           top = await fetchTopScores();
         } catch {
           /* zapis się nie udał — pokażemy ostatnio pobrany ranking */
         }
-        this.renderRanking(top, result);
+        this.renderRanking(top, mine);
         this.bindRetryEnter();
       });
     } else {
@@ -131,17 +136,10 @@ export class EndScene extends Phaser.Scene {
       return;
     }
 
-    let highlighted = mine === null;
+    const mineIndex = mine === null ? -1 : findPlayerIndex(top, mine);
     top.forEach((e, i) => {
       const y = RANKING_TOP_Y + 26 + i * 25;
-      const isMine =
-        !highlighted &&
-        mine !== null &&
-        e.name === mine.name &&
-        e.score === mine.score &&
-        e.timeMs === mine.timeMs &&
-        e.reason === mine.reason;
-      if (isMine) highlighted = true;
+      const isMine = i === mineIndex;
       const rank = (i + 1).toString().padStart(2, " ");
       const name = e.name.slice(0, 11).padEnd(11, " ");
       const timeCol = (e.reason === "win" ? formatTime(e.timeMs) : "—").padStart(8, " ");

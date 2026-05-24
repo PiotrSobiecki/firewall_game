@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { sortEntries, topEntries, qualifies, highScore, topName, type RunResult } from "./ranking";
+import {
+  sortEntries,
+  topEntries,
+  qualifies,
+  highScore,
+  topName,
+  isSameRun,
+  findPlayerIndex,
+  type RunResult,
+} from "./ranking";
 import { LEADERBOARD_SIZE } from "../config";
 
 const win = (name: string, score: number, timeMs: number): RunResult => ({
@@ -71,6 +80,21 @@ describe("ranking — highScore", () => {
   it("is zero for an empty list and the max score otherwise", () => {
     expect(highScore([])).toBe(0);
     expect(highScore([win("A", 700, 70_000), loss("B", 1200)])).toBe(1200);
+  });
+});
+
+describe("ranking — isSameRun (podświetlenie na EndScene)", () => {
+  it("matches after API rounding of timeMs and score", () => {
+    const local = win("YETI", 2110.4, 67_737.6);
+    const fromApi = win("YETI", 2110, 67_738);
+    expect(isSameRun(local, fromApi)).toBe(true);
+    expect(findPlayerIndex([fromApi, win("OTHER", 900, 80_000)], local)).toBe(0);
+  });
+
+  it("does not match a different run with the same name", () => {
+    const a = win("YETI", 1000, 60_000);
+    const b = win("YETI", 1100, 60_000);
+    expect(isSameRun(a, b)).toBe(false);
   });
 });
 
