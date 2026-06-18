@@ -23,8 +23,8 @@ export class RetroGridBackground {
   private readonly scrollSpeed = 60; // px/s
   private readonly cactusScrollSpeed = 32; // px/s — wolny parallax przy drodze
   private readonly cactusPeriod = 300;
-  private readonly sunY = GAME_HEIGHT * BTTF.sunYRatio;
-  private readonly horizonY = GAME_HEIGHT * BTTF.sunYRatio - 6;
+  private readonly horizonY = GAME_HEIGHT * BTTF.sunYRatio;
+  private readonly sunX = GAME_WIDTH * BTTF.sunXRatio;
   private readonly cactusPlacements: CactusPlacement[] = [
     { side: "left", offset: 0, kind: "saguaro", scale: 1 },
     { side: "left", offset: 95, kind: "barrel", scale: 0.95 },
@@ -159,7 +159,7 @@ export class RetroGridBackground {
   private drawSunset(): void {
     const g = this.horizon;
     const hy = this.horizonY;
-    const sy = this.sunY;
+    const sx = this.sunX;
     const bands = [
       { y: hy - 70, h: 40, color: BTTF.colors.sunsetTop, alpha: 0.55 },
       { y: hy - 30, h: 35, color: BTTF.colors.sunsetMid, alpha: 0.5 },
@@ -172,10 +172,26 @@ export class RetroGridBackground {
     // ciemniejszy pas „ziemi” przy krawędzi drogi
     g.fillStyle(0x8a4a18, 0.22);
     g.fillRect(0, hy + 8, GAME_WIDTH, GAME_HEIGHT - hy - 8);
-    g.fillStyle(0xffe0a0, 0.35);
-    g.fillCircle(GAME_WIDTH / 2, sy, 36);
-    g.fillStyle(0xffcc66, 0.2);
-    g.fillCircle(GAME_WIDTH / 2, sy, 52);
+    // słońce zachodzące: połowa nad horyzontem, reszta „za” linią ziemi
+    this.fillSunArc(g, sx, hy, 52, 0xffcc66, 0.2);
+    this.fillSunArc(g, sx, hy, 36, 0xffe0a0, 0.38);
+  }
+
+  /** Górna połówka kuli — środek na linii horyzontu. */
+  private fillSunArc(
+    g: Phaser.GameObjects.Graphics,
+    cx: number,
+    hy: number,
+    radius: number,
+    color: number,
+    alpha: number,
+  ): void {
+    g.fillStyle(color, alpha);
+    g.beginPath();
+    g.arc(cx, hy, radius, Math.PI, 0, false);
+    g.lineTo(cx, hy);
+    g.closePath();
+    g.fillPath();
   }
 
   private drawScanlines(): void {

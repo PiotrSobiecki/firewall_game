@@ -126,8 +126,10 @@ export const BTTF = {
     cactus: 0x143828,
     cactusHi: 0x1f5c36,
   },
-  /** Pozycja słońca / horyzontu (ułamek wysokości ekranu, od góry). */
+  /** Linia horyzontu (ułamek wysokości ekranu, od góry). Środek słońca leży na niej. */
   sunYRatio: 0.8,
+  /** Słońce lekko na lewo od środka ekranu. */
+  sunXRatio: 0.36,
   /** Pierwszy przejazd DeLoreana po starcie rundy. */
   flybyFirstMs: { min: 8_000, max: 22_000 },
   /** Odstęp między kolejnymi przejazdami (gdy poprzedni zniknął z ekranu). */
