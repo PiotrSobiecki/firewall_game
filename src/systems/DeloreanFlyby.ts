@@ -55,7 +55,11 @@ export class DeloreanFlyby {
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
     const visual = spawnDeloreanPass(this.scene, dir, 6);
     const car = this.scene.physics.add.existing(visual.car) as Phaser.Physics.Arcade.Image;
-    (car.body as Phaser.Physics.Arcade.Body).setSize(72, 22).setOffset(8, 8);
+    const { hitW, hitH, hitOffsetX, hitOffsetY, displayScale } = BTTF.delorean;
+    const body = car.body as Phaser.Physics.Arcade.Body;
+    body
+      .setSize(hitW * displayScale, hitH * displayScale)
+      .setOffset(hitOffsetX * displayScale, hitOffsetY * displayScale);
     car.setVelocity(dir * BTTF.flybySpeed, 0);
     this.pass = { ...visual, car };
 

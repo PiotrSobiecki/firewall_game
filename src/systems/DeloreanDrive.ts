@@ -4,9 +4,15 @@ import { BTTF, GAME_WIDTH, GAME_HEIGHT } from "../config";
 
 export type DeloreanPass = {
   car: Phaser.GameObjects.Image;
-  trails: Phaser.GameObjects.Particles.ParticleEmitter;
+  rearFlames: Phaser.GameObjects.Particles.ParticleEmitter;
+  wheelSmokeL: Phaser.GameObjects.Particles.ParticleEmitter;
+  wheelSmokeR: Phaser.GameObjects.Particles.ParticleEmitter;
   dir: 1 | -1;
 };
+
+function trailSide(dir: 1 | -1): number {
+  return dir === 1 ? -1 : 1;
+}
 
 /** Wspólny wygląd przejazdu DeLoreana po drodze (menu + gra). */
 export function spawnDeloreanPass(
@@ -14,32 +20,57 @@ export function spawnDeloreanPass(
   dir: 1 | -1,
   depth = 3,
 ): DeloreanPass {
+  const { displayScale, originY } = BTTF.delorean;
   const y = GAME_HEIGHT * BTTF.flybyYRatio;
-  const x = dir === 1 ? -70 : GAME_WIDTH + 70;
-  const tex = dir === 1 ? TEXTURE.deloreanR : TEXTURE.deloreanL;
+  const x = dir === 1 ? -90 : GAME_WIDTH + 90;
+  const back = trailSide(dir);
 
-  const car = scene.add.image(x, y, tex);
+  const car = scene.add.image(x, y, TEXTURE.delorean);
   car.setDepth(depth);
-  car.setOrigin(0.5, 0.85);
+  car.setOrigin(0.5, originY);
+  car.setScale(displayScale);
+  car.setFlipX(dir === -1);
 
-  const trails = scene.add.particles(0, 0, TEXTURE.particle, {
-    speed: { min: 30, max: 90 },
-    lifespan: 260,
-    scale: { start: 0.55, end: 0 },
-    alpha: { start: 0.7, end: 0 },
-    tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed],
-    frequency: 50,
+  const rearFlames = scene.add.particles(0, 0, TEXTURE.particle, {
+    speed: { min: 40, max: 110 },
+    lifespan: 280,
+    scale: { start: 0.65, end: 0 },
+    alpha: { start: 0.85, end: 0 },
+    tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed, 0xffcc00],
+    frequency: 36,
+    angle: { min: back * 160, max: back * 200 },
     follow: car,
-    followOffset: { x: dir === 1 ? -32 : 32, y: 2 },
+    followOffset: { x: back * 50, y: -10 },
   });
-  trails.setDepth(depth - 1);
+  rearFlames.setDepth(depth - 1);
 
-  return { car, trails, dir };
+  const wheelSmoke = (localX: number) =>
+    scene.add.particles(0, 0, TEXTURE.smoke, {
+      speed: { min: 8, max: 35 },
+      lifespan: 420,
+      scale: { start: 0.35, end: 0.9 },
+      alpha: { start: 0.35, end: 0 },
+      tint: [0xc8b090, 0xa89070, 0x887860],
+      frequency: 90,
+      angle: { min: 200, max: 340 },
+      gravityY: -18,
+      follow: car,
+      followOffset: { x: localX, y: 14 },
+    });
+
+  const wheelSmokeL = wheelSmoke(back * -26);
+  const wheelSmokeR = wheelSmoke(back * 26);
+  wheelSmokeL.setDepth(depth - 1);
+  wheelSmokeR.setDepth(depth - 1);
+
+  return { car, rearFlames, wheelSmokeL, wheelSmokeR, dir };
 }
 
 export function destroyDeloreanPass(pass: DeloreanPass | undefined): void {
   if (!pass) return;
-  pass.trails.destroy();
+  pass.rearFlames.destroy();
+  pass.wheelSmokeL.destroy();
+  pass.wheelSmokeR.destroy();
   pass.car.destroy();
 }
 
@@ -63,7 +94,7 @@ export class DeloreanMenuDrive {
     const { car, dir } = this.pass;
     car.x += dir * BTTF.flybySpeed * dtSec;
     const off =
-      (dir === 1 && car.x > GAME_WIDTH + 120) || (dir === -1 && car.x < -120);
+      (dir === 1 && car.x > GAME_WIDTH + 140) || (dir === -1 && car.x < -140);
     if (off) this.endPass();
   }
 

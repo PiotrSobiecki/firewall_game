@@ -140,6 +140,15 @@ export const BTTF = {
   flybyYRatio: 0.9,
   /** Pauza między przejazdami na ekranie startowym. */
   menuDriveBetweenMs: { min: 2_000, max: 5_500 },
+  /** Pixel-art DeLoreana z `public/delorean.png`. */
+  delorean: {
+    displayScale: 0.17,
+    originY: 0.88,
+    hitW: 82,
+    hitH: 20,
+    hitOffsetX: 8,
+    hitOffsetY: 14,
+  },
 } as const;
 
 /** Tuning gracza (do playtestu). */

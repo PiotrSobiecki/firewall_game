@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { registerGameTextures } from "../art/SpriteTextures";
+import { loadDeloreanAsset } from "../art/DeloreanTexture";
 import { MUSIC_KEY, musicPath } from "../systems/MusicController";
 
 /**
@@ -13,6 +14,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.load.audio(MUSIC_KEY, musicPath());
+    loadDeloreanAsset(this);
     // 404 na mp3 nie może wywalić preloadu — utwór po prostu nie trafi do cache
     this.load.on("loaderror", (file: Phaser.Loader.File) => {
       if (file.key === MUSIC_KEY) {
