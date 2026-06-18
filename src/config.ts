@@ -151,7 +151,7 @@ export const BTTF = {
     /** Pozycja emittera płomieni względem środka auta (x = w tył, y = w górę). */
     rearFlameOffset: { x: 38, y: -24 },
     /** Kurz z kół — y bliżej osi kół (mniej = wyżej). */
-    wheelSmokeOffset: { x: 30, y: -2 },
+    wheelSmokeOffset: { x: 30, y: -6 },
   },
 } as const;
 
