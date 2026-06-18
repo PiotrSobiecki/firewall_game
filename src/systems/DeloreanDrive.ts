@@ -15,12 +15,12 @@ export function spawnDeloreanPass(
   depth = 3,
 ): DeloreanPass {
   const y = GAME_HEIGHT * BTTF.flybyYRatio;
-  const x = dir === 1 ? -80 : GAME_WIDTH + 80;
+  const x = dir === 1 ? -70 : GAME_WIDTH + 70;
   const tex = dir === 1 ? TEXTURE.deloreanR : TEXTURE.deloreanL;
 
   const car = scene.add.image(x, y, tex);
   car.setDepth(depth);
-  car.setOrigin(0.5, 0.88);
+  car.setOrigin(0.5, 0.85);
 
   const trails = scene.add.particles(0, 0, TEXTURE.particle, {
     speed: { min: 30, max: 90 },
@@ -30,7 +30,7 @@ export function spawnDeloreanPass(
     tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed],
     frequency: 50,
     follow: car,
-    followOffset: { x: dir === 1 ? -42 : 42, y: 2 },
+    followOffset: { x: dir === 1 ? -32 : 32, y: 2 },
   });
   trails.setDepth(depth - 1);
 

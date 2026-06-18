@@ -31,7 +31,7 @@ export const SPRITE = {
   playerBullet: { w: 12, h: 16 },
   powerup: { w: 28, h: 28 },
   particle: { w: 10, h: 10 },
-  delorean: { w: 112, h: 44 },
+  delorean: { w: 88, h: 36 },
 } as const;
 
 const DARK = 0x1a2238;
@@ -517,7 +517,7 @@ function createPowerUpTextures(scene: Phaser.Scene): void {
   });
 }
 
-/** Boczny widok DeLoreana — czytelny profil (klin, pas szyb, koła, ogień z tyłu). */
+/** Boczny widok DeLoreana — oryginalny mniejszy sprite (L/R bez flipX). */
 function createDeloreanTextures(scene: Phaser.Scene): void {
   const { w, h } = SPRITE.delorean;
   for (const [key, facingRight] of [
@@ -539,91 +539,58 @@ function drawDeloreanSide(
 ): void {
   const { deloreanSilver, deloreanDark, fluxBlue, flameOrange, flameRed } = BTTF.colors;
   const mx = (x: number) => (facingRight ? x : w - x);
+  const rectX = (x: number, width: number) => (facingRight ? x : w - x - width);
 
-  const noseX = facingRight ? w - 8 : 8;
-  const tailX = facingRight ? 10 : w - 10;
-  const flameOut = facingRight ? -1 : 1;
+  // ogień z rur (czerwone smugi za tyłem)
+  g.fillStyle(flameRed, 0.55);
+  g.fillTriangle(mx(2), h * 0.55, mx(18), h * 0.42, mx(18), h * 0.68);
+  g.fillStyle(flameOrange, 0.85);
+  g.fillTriangle(mx(6), h * 0.55, mx(20), h * 0.48, mx(20), h * 0.62);
 
-  // ogień z rur — zawsze z tyłu auta
-  g.fillStyle(flameRed, 0.7);
-  g.fillTriangle(
-    mx(tailX),
-    h * 0.52,
-    mx(tailX + flameOut * 22),
-    h * 0.38,
-    mx(tailX + flameOut * 22),
-    h * 0.66,
-  );
-  g.fillStyle(flameOrange, 0.9);
-  g.fillTriangle(
-    mx(tailX + flameOut * 2),
-    h * 0.52,
-    mx(tailX + flameOut * 16),
-    h * 0.44,
-    mx(tailX + flameOut * 16),
-    h * 0.6,
-  );
-
-  // dolny czarny pas nadwozia
-  g.fillStyle(0x111111, 1);
-  g.fillRect(14, h * 0.68, w - 28, h * 0.14);
-
-  // kadłub — charakterystyczny klin DeLoreana
+  // kadłub — niski klin ze stali
   const body: Phaser.Math.Vector2[] = [
-    new Phaser.Math.Vector2(mx(noseX), h * 0.48),
-    new Phaser.Math.Vector2(mx(facingRight ? w - 28 : 28), h * 0.34),
-    new Phaser.Math.Vector2(mx(facingRight ? 36 : w - 36), h * 0.34),
-    new Phaser.Math.Vector2(mx(tailX), h * 0.5),
-    new Phaser.Math.Vector2(mx(tailX + (facingRight ? 8 : -8)), h * 0.72),
-    new Phaser.Math.Vector2(mx(facingRight ? 28 : w - 28), h * 0.76),
-    new Phaser.Math.Vector2(mx(facingRight ? 52 : w - 52), h * 0.72),
+    new Phaser.Math.Vector2(mx(16), h * 0.38),
+    new Phaser.Math.Vector2(mx(w - 10), h * 0.42),
+    new Phaser.Math.Vector2(mx(w - 6), h * 0.72),
+    new Phaser.Math.Vector2(mx(14), h * 0.78),
   ];
   g.fillStyle(deloreanDark, 1);
   g.fillPoints(body, true, true);
   g.fillStyle(deloreanSilver, 1);
   g.fillPoints(
     [
-      new Phaser.Math.Vector2(mx(noseX - (facingRight ? 4 : -4)), h * 0.5),
-      new Phaser.Math.Vector2(mx(facingRight ? w - 30 : 30), h * 0.38),
-      new Phaser.Math.Vector2(mx(facingRight ? 40 : w - 40), h * 0.38),
-      new Phaser.Math.Vector2(mx(tailX + (facingRight ? 4 : -4)), h * 0.52),
-      new Phaser.Math.Vector2(mx(facingRight ? 30 : w - 30), h * 0.7),
-      new Phaser.Math.Vector2(mx(facingRight ? 54 : w - 54), h * 0.68),
+      new Phaser.Math.Vector2(mx(18), h * 0.4),
+      new Phaser.Math.Vector2(mx(w - 12), h * 0.44),
+      new Phaser.Math.Vector2(mx(w - 8), h * 0.68),
+      new Phaser.Math.Vector2(mx(16), h * 0.72),
     ],
     true,
     true,
   );
 
-  // pas szyb / linia drzwi skrzydłowych
-  g.fillStyle(0x0a1018, 1);
-  g.fillRect(mx(facingRight ? 38 : w - 86), h * 0.36, 48, 10);
-  g.lineStyle(1.5, 0xffffff, 0.4);
-  g.lineBetween(mx(facingRight ? 42 : w - 42), h * 0.4, mx(facingRight ? 78 : w - 78), h * 0.4);
+  // pas szyb / drzwi skrzydłowe
+  g.lineStyle(2, deloreanDark, 1);
+  g.lineBetween(mx(28), h * 0.44, mx(w - 22), h * 0.46);
+  g.lineStyle(1, 0xffffff, 0.35);
+  g.lineBetween(mx(30), h * 0.46, mx(w - 24), h * 0.48);
 
-  // żaluzje tylne + światła
-  g.lineStyle(1, deloreanDark, 0.9);
-  for (let i = 0; i < 4; i++) {
-    const lx = tailX + (facingRight ? 6 : -6) + (facingRight ? i * 3 : -i * 3);
-    g.lineBetween(mx(lx), h * 0.46, mx(lx), h * 0.58);
-  }
-  g.fillStyle(0xff3333, 1);
-  g.fillCircle(mx(tailX + (facingRight ? 6 : -6)), h * 0.54, 3);
+  // tylne okno + błysk kondensatora flux
+  g.fillStyle(0x0a1420, 1);
+  g.fillRoundedRect(rectX(w - 28, 16), h * 0.44, 16, 12, 2);
+  g.fillStyle(fluxBlue, 0.9);
+  g.fillRect(rectX(w - 24, 8), h * 0.5, 8, 4);
+  g.fillStyle(0xffffff, 0.7);
+  g.fillRect(rectX(w - 22, 3), h * 0.51, 3, 2);
 
-  // kondensator flux w tylnym oknie
-  g.fillStyle(fluxBlue, 0.85);
-  g.fillRect(mx(facingRight ? 22 : w - 30), h * 0.42, 8, 5);
-
-  // koła — dwa widoczne, na „asfalcie”
+  // koła
   const wheel = (wx: number) => {
-    g.fillStyle(0x0a0a0a, 1);
-    g.fillCircle(mx(wx), h * 0.82, 9);
+    g.fillStyle(0x111111, 1);
+    g.fillCircle(mx(wx), h * 0.8, 7);
     g.fillStyle(deloreanSilver, 1);
-    g.fillCircle(mx(wx), h * 0.82, 5);
-    g.fillStyle(0x222222, 1);
-    g.fillCircle(mx(wx), h * 0.82, 2);
+    g.fillCircle(mx(wx), h * 0.8, 4);
   };
-  wheel(facingRight ? 34 : w - 34);
-  wheel(facingRight ? w - 30 : 30);
+  wheel(30);
+  wheel(w - 20);
 }
 
 function createParticleTexture(scene: Phaser.Scene): void {
