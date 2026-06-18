@@ -123,6 +123,8 @@ export const BTTF = {
     fluxBlue: 0x44ccff,
     flameOrange: 0xff6600,
     flameRed: 0xff2200,
+    cactus: 0x143828,
+    cactusHi: 0x1f5c36,
   },
   /** Pozycja słońca / horyzontu (ułamek wysokości ekranu, od góry). */
   sunYRatio: 0.8,
