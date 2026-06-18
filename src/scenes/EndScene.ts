@@ -15,6 +15,7 @@ import {
 } from "../systems/ranking";
 import { fetchTopScores, submitScore } from "../systems/scoreApi";
 import { MusicController } from "../systems/MusicController";
+import { DeloreanMenuDrive } from "../systems/DeloreanDrive";
 
 /** Powód zakończenia rundy + wynik i czas (z GameScene). */
 export interface EndData {
@@ -39,6 +40,7 @@ function formatTime(ms: number): string {
 /** Ekran końcowy: wynik + ranking + retry + link do utworu. */
 export class EndScene extends Phaser.Scene {
   private bg!: RetroGridBackground;
+  private deloreanDrive!: DeloreanMenuDrive;
 
   constructor() {
     super("EndScene");
@@ -46,6 +48,7 @@ export class EndScene extends Phaser.Scene {
 
   create(data: EndData): void {
     this.bg = new RetroGridBackground(this);
+    this.deloreanDrive = new DeloreanMenuDrive(this);
 
     // Jeśli muzyka gra, leci dalej (nie urywamy jej przy końcu); M ją wł./wył.
     const music = new MusicController(this);
@@ -280,6 +283,8 @@ export class EndScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    this.bg.update(delta / 1000);
+    const dt = delta / 1000;
+    this.bg.update(dt);
+    this.deloreanDrive.update(dt);
   }
 }
