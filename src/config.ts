@@ -108,6 +108,33 @@ export const COLOR_HEX = {
   green: "#00ff88",
 } as const;
 
+/**
+ * Motyw teledysku „Firewall” — klimat Powrót do przyszłości / DeLorean.
+ * Używane w tle, UI i rzadkim przejażdżce easter eggu w trakcie rundy.
+ */
+export const BTTF = {
+  /** Kolory zachodu + stali DeLoriana (proceduralne sprite’y / gradient). */
+  colors: {
+    sunsetTop: 0x2a1050,
+    sunsetMid: 0xc43a18,
+    sunsetLow: 0xff9a3c,
+    deloreanSilver: 0xb8c4d0,
+    deloreanDark: 0x3a4248,
+    fluxBlue: 0x44ccff,
+    flameOrange: 0xff6600,
+    flameRed: 0xff2200,
+  },
+  /** Pozycja słońca / horyzontu (ułamek wysokości ekranu, od góry). */
+  sunYRatio: 0.8,
+  /** Pierwszy przejazd DeLoreana po starcie rundy. */
+  flybyFirstMs: { min: 8_000, max: 22_000 },
+  /** Odstęp między kolejnymi przejazdami (gdy poprzedni zniknął z ekranu). */
+  flybyIntervalMs: { min: 14_000, max: 32_000 },
+  flybySpeed: 380,
+  flybyBonus: 88,
+  flybyYRatio: 0.62,
+} as const;
+
 /** Tuning gracza (do playtestu). */
 export const PLAYER = {
   speed: 300,

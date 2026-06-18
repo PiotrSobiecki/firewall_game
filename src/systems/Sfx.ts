@@ -92,4 +92,10 @@ export class Sfx {
     this.tone("sawtooth", 220, 48, 0.5, 0.35);
     this.noise(0.5, 0.3, 700);
   }
+
+  /** Bonus / easter egg (np. trafienie DeLoreana). */
+  bonusCatch(): void {
+    this.tone("square", 440, 880, 0.12, 0.22);
+    this.tone("sine", 660, 1320, 0.14, 0.18);
+  }
 }

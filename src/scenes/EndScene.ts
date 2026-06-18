@@ -85,6 +85,7 @@ export class EndScene extends Phaser.Scene {
     musicBtn.on("pointerdown", () =>
       window.open(MUSIC_URL, "_blank", "noopener"),
     );
+
     const retry = this.makeButton(
       GAME_HEIGHT - 94,
       "↻ ZAGRAJ JESZCZE RAZ",

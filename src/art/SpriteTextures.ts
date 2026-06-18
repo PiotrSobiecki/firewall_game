@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS } from "../config";
+import { BTTF, COLORS } from "../config";
 
 /** Klucze tekstur generowanych w BootScene. */
 export const TEXTURE = {
@@ -16,6 +16,7 @@ export const TEXTURE = {
   puShield: "pu_shield",
   puRepair: "pu_repair",
   particle: "particle",
+  delorean: "delorean",
 } as const;
 
 export const SPRITE = {
@@ -29,6 +30,7 @@ export const SPRITE = {
   playerBullet: { w: 12, h: 16 },
   powerup: { w: 28, h: 28 },
   particle: { w: 10, h: 10 },
+  delorean: { w: 88, h: 36 },
 } as const;
 
 const DARK = 0x1a2238;
@@ -52,6 +54,7 @@ export function registerGameTextures(scene: Phaser.Scene): void {
   createPlayerBulletTexture(scene);
   createPowerUpTextures(scene);
   createParticleTexture(scene);
+  createDeloreanTexture(scene);
 }
 
 /** Heraldyczny kontur tarczy jako lista wierzchołków (Phaser 4: Vector2). */
@@ -511,6 +514,67 @@ function createPowerUpTextures(scene: Phaser.Scene): void {
     g.fillRect(cx - 2, 7, 4, h - 14);
     g.fillRect(7, cy - 2, w - 14, 4);
   });
+}
+
+/** Boczny widok DeLoreana — easter egg z teledysku (stylizowany, bez logo). */
+function createDeloreanTexture(scene: Phaser.Scene): void {
+  const { w, h } = SPRITE.delorean;
+  const g = scene.make.graphics({ x: 0, y: 0 });
+  const { deloreanSilver, deloreanDark, fluxBlue, flameOrange, flameRed } = BTTF.colors;
+
+  // ogień z rur (czerwone smugi za tyłem)
+  g.fillStyle(flameRed, 0.55);
+  g.fillTriangle(2, h * 0.55, 18, h * 0.42, 18, h * 0.68);
+  g.fillStyle(flameOrange, 0.85);
+  g.fillTriangle(6, h * 0.55, 20, h * 0.48, 20, h * 0.62);
+
+  // kadłub — niski klin ze stali
+  const body: Phaser.Math.Vector2[] = [
+    new Phaser.Math.Vector2(16, h * 0.38),
+    new Phaser.Math.Vector2(w - 10, h * 0.42),
+    new Phaser.Math.Vector2(w - 6, h * 0.72),
+    new Phaser.Math.Vector2(14, h * 0.78),
+  ];
+  g.fillStyle(deloreanDark, 1);
+  g.fillPoints(body, true, true);
+  g.fillStyle(deloreanSilver, 1);
+  g.fillPoints(
+    [
+      new Phaser.Math.Vector2(18, h * 0.4),
+      new Phaser.Math.Vector2(w - 12, h * 0.44),
+      new Phaser.Math.Vector2(w - 8, h * 0.68),
+      new Phaser.Math.Vector2(16, h * 0.72),
+    ],
+    true,
+    true,
+  );
+
+  // pas szyb / drzwi skrzydłowe (charakterystyczna linia)
+  g.lineStyle(2, deloreanDark, 1);
+  g.lineBetween(28, h * 0.44, w - 22, h * 0.46);
+  g.lineStyle(1, 0xffffff, 0.35);
+  g.lineBetween(30, h * 0.46, w - 24, h * 0.48);
+
+  // tylne okno + błysk kondensatora flux
+  g.fillStyle(0x0a1420, 1);
+  g.fillRoundedRect(w - 28, h * 0.44, 16, 12, 2);
+  g.fillStyle(fluxBlue, 0.9);
+  g.fillRect(w - 24, h * 0.5, 8, 4);
+  g.fillStyle(0xffffff, 0.7);
+  g.fillRect(w - 22, h * 0.51, 3, 2);
+
+  // koła
+  const wheel = (wx: number) => {
+    g.fillStyle(0x111111, 1);
+    g.fillCircle(wx, h * 0.8, 7);
+    g.fillStyle(deloreanSilver, 1);
+    g.fillCircle(wx, h * 0.8, 4);
+  };
+  wheel(30);
+  wheel(w - 20);
+
+  g.generateTexture(TEXTURE.delorean, w, h);
+  g.destroy();
 }
 
 function createParticleTexture(scene: Phaser.Scene): void {

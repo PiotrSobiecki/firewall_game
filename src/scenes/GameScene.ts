@@ -11,6 +11,7 @@ import {
   PLAYER,
   PLAYER_SHOT,
   BOSS,
+  BTTF,
   TOUCH,
   WIN_SCORE_AFTER_MINI_BOSS,
 } from "../config";
@@ -29,6 +30,7 @@ import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { HUD } from "../ui/HUD";
 import { MusicController } from "../systems/MusicController";
 import { Sfx } from "../systems/Sfx";
+import { DeloreanFlyby } from "../systems/DeloreanFlyby";
 import { followDrive } from "../systems/TouchMove";
 import type { EndData } from "./EndScene";
 
@@ -94,6 +96,7 @@ export class GameScene extends Phaser.Scene {
   private joyVecY = 0;
   private joyBase?: Phaser.GameObjects.Arc;
   private joyKnob?: Phaser.GameObjects.Arc;
+  private delorean?: DeloreanFlyby;
 
   constructor() {
     super("GameScene");
@@ -197,6 +200,16 @@ export class GameScene extends Phaser.Scene {
       (waveNumber) => this.onWaveComplete(waveNumber),
     );
 
+    this.delorean = new DeloreanFlyby(this, this.player, {
+      onCollect: () => {
+        const pts = this.score.addBonus(BTTF.flybyBonus);
+        this.hud.setScore(this.score.score);
+        this.hud.flashDeloreanCatch();
+        this.registerPostBossPoints(pts);
+        this.cameras.main.flash(180, 255, 204, 0, false);
+        this.sfx.bonusCatch();
+      },
+    });
   }
 
   private spawnEnemy(type: EnemyType, level: DifficultyLevel, now: number): void {
@@ -328,6 +341,7 @@ export class GameScene extends Phaser.Scene {
     this.spawner.update(time, elapsed);
     this.hud.setWave(this.spawner.waveNumber);
     this.hud.setObjective(this.score.score, this.run.bossDefeated, this.run.pointsAfterBoss);
+    this.delorean?.update(elapsed, this.ended);
     this.tryEndWin();
     if (this.ended) return;
     this.checkRunEnd();

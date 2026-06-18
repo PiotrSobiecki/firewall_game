@@ -276,6 +276,27 @@ export class HUD {
     });
   }
 
+  /** Easter egg: trafienie DeLoreana w trakcie przejazdu. */
+  flashDeloreanCatch(): void {
+    const t = this.scene.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, "GREAT SCOTT!\n88 MPH · +88", {
+        fontFamily: "monospace",
+        fontSize: "22px",
+        color: COLOR_HEX.yellow,
+        fontStyle: "bold",
+        align: "center",
+      })
+      .setOrigin(0.5)
+      .setDepth(17);
+    this.scene.tweens.add({
+      targets: t,
+      alpha: 0,
+      y: GAME_HEIGHT * 0.42,
+      duration: 1400,
+      onComplete: () => t.destroy(),
+    });
+  }
+
   /** Krótki komunikat o przejściu fali (z bonusem). */
   flashWave(waveNumber: number): void {
     const t = this.scene.add
