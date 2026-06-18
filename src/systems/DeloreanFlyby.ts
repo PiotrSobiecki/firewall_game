@@ -70,7 +70,7 @@ export class DeloreanFlyby {
     this.active = true;
     this.caughtThisCar = false;
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
-    this.pass = spawnDeloreanPass(this.scene, dir, 6, { lite: true });
+    this.pass = spawnDeloreanPass(this.scene, dir, BTTF.menuDeloreanDepth);
   }
 
   private finishPass(elapsedMs: number): void {

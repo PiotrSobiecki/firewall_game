@@ -89,7 +89,7 @@ export function drawPixelTumbleweed(
   g.lineStyle(Math.max(1, u * 0.4), palette.strand, alpha * 0.75);
   for (const [x1, y1, x2, y2] of WISPS) {
     const a = toWorld(x1, y1);
-    const b = { x: snap(cx + (x2 - 6) * scale * 0.82), y: snap(cy + y2 * scale * 0.55) };
+    const b = toWorld(x2, y2);
     g.lineBetween(a.x, a.y, b.x, b.y);
   }
 

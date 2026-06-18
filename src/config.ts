@@ -166,25 +166,23 @@ export const BTTF = {
       scrubHi: 0x6a8450,
       alpha: 0.62,
     },
-    /** Tumbleweed — pojedynczo, max 2, leci po ukosie przez pustynię w prawo. */
+    /** Tumbleweed — pojedynczo, max 2, toczy się po ukosie przez pustynię w prawo. */
     tumbleweed: {
-      scrollSpeed: 58,
+      scrollSpeed: 72,
       maxOnScreen: 2,
       minTravelGap: 200,
       spawnDelayMs: { min: 2_800, max: 6_500 },
-      maxTravel: 480,
       yOffset: 8,
       /** Górny pas pustyni (px pod horyzontem). */
       yMin: 68,
       /** px nad dolną linią pustyni — nie wchodzi w pas bohaterki na menu. */
       groundClearance: 50,
       /** Spadek/wzrost Y (px) między lewą a prawą krawędzią — różne ukośne tory. */
-      slantYMin: -34,
-      slantYMax: 36,
+      slantYMin: -22,
+      slantYMax: 24,
       scaleMin: 0.78,
       scaleMax: 1.38,
       alpha: 0.92,
-      rollSpeed: 0.22,
     },
   },
   /** Linia horyzontu (ułamek wysokości ekranu, od góry). Środek słońca leży na niej. */
@@ -268,9 +266,10 @@ export const BTTF = {
     hitOffsetX: 8,
     hitOffsetY: 14,
     /** Pozycja emittera płomieni względem środka auta (x = w tył, y = w górę). */
-    rearFlameOffset: { x: 38, y: -24 },
-    /** Kurz z kół — y bliżej osi kół (mniej = wyżej). */
-    wheelSmokeOffset: { x: 30, y: -6 },
+    rearFlameOffset: { x: 46, y: -30 },
+    /** Kurz z kół — x = od środka w bok, y = w górę; rearPull w DeloreanDrive przesuwa w tył auta. */
+    wheelSmokeOffset: { x: 32, y: -12 },
+    wheelSmokeRearPull: 12,
     /** Strefa „zbicia” auta statkiem (px od środka sprite’a). */
     catchPadX: 58,
     catchPadY: 72,

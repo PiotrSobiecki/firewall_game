@@ -26,13 +26,12 @@ interface StaticScrub {
 
 interface ActiveTumbleweed {
   travel: number;
-  roll: number;
   scale: number;
   yStart: number;
   yEnd: number;
 }
 
-const CACTUS_KINDS: CactusKind[] = ["saguaro", "barrel", "saguaroShort", "saguaro", "barrel", "saguaroShort"];
+const CACTUS_KINDS: CactusKind[] = ["saguaro", "saguaroShort", "saguaro", "saguaroShort", "saguaro", "saguaroShort"];
 
 function buildCactusPlacements(period: number, spacing: number): CactusPlacement[] {
   const out: CactusPlacement[] = [];
@@ -97,8 +96,13 @@ export class RetroGridBackground {
   private cactiFront: Phaser.GameObjects.Graphics;
   private offset = 0;
   private cactusScroll = 0;
+  private scrubTime = 0;
   private activeTumbleweeds: ActiveTumbleweed[] = [];
   private tumbleSpawnCd = 1.2;
+  /** Lewy start i dystans w px — travel = roll × promień (bez poślizgu). */
+  private readonly tumbleStartX = -55;
+  private readonly tumbleCross = GAME_WIDTH + 110;
+  private readonly tumbleCull = 16;
   private readonly spacing = 40;
   private readonly scrollSpeed = 60; // px/s
   private readonly cactusScrollSpeed = BTTF.cactus.scrollSpeed;
@@ -139,6 +143,7 @@ export class RetroGridBackground {
   update(dtSec: number): void {
     this.offset = (this.offset + this.scrollSpeed * dtSec) % this.spacing;
     this.cactusScroll += this.cactusScrollSpeed * dtSec;
+    this.scrubTime += dtSec;
     this.updateTumbleweeds(dtSec);
 
     this.grid.clear();
@@ -182,12 +187,13 @@ export class RetroGridBackground {
     }
   }
 
-  /** Krzaki rozrzucone po pustyni — nieruchome. */
+  /** Krzaki — nieruchome, lekko podskakują na miejscu. */
   private drawStaticScrub(g: Phaser.GameObjects.Graphics): void {
     const { scrub, scrubHi, alpha } = BTTF.cactus.scrub;
-    for (const p of this.staticScrub) {
-      this.drawScrub(g, p.x, p.y, p.scale, scrub, scrubHi, alpha);
-    }
+    this.staticScrub.forEach((p, i) => {
+      const bob = Math.sin(this.scrubTime * 3.4 + i * 2.17) * 3.2 * p.scale;
+      this.drawScrub(g, p.x, p.y + bob, p.scale, scrub, scrubHi, alpha);
+    });
   }
 
   /** Kaktusy blisko — parallax przy krawędziach drogi (jak wcześniej). */
@@ -212,11 +218,11 @@ export class RetroGridBackground {
   /** Pojedyncze kłęby — max 2, w tym samym kierunku, z odstępem. */
   private updateTumbleweeds(dtSec: number): void {
     const cfg = BTTF.cactus.tumbleweed;
-    const { scrollSpeed, maxTravel, maxOnScreen, minTravelGap, rollSpeed } = cfg;
+    const { scrollSpeed, maxOnScreen, minTravelGap } = cfg;
+    const maxTravel = this.tumbleCross + this.tumbleCull;
 
     for (const t of this.activeTumbleweeds) {
       t.travel += scrollSpeed * dtSec;
-      t.roll += rollSpeed * dtSec;
     }
     this.activeTumbleweeds = this.activeTumbleweeds.filter((t) => t.travel < maxTravel);
 
@@ -235,7 +241,6 @@ export class RetroGridBackground {
 
     this.activeTumbleweeds.push({
       travel: 0,
-      roll: 0,
       scale: 0.92 + Math.random() * 0.28,
       yStart: desertTop + Math.random() * yBand * 0.82,
       yEnd: 0,
@@ -251,11 +256,9 @@ export class RetroGridBackground {
       Phaser.Math.Between(cfg.spawnDelayMs.min, cfg.spawnDelayMs.max) / 1000;
   }
 
-  /** Kłęby — pixel art, ukośnie przez całą pustynię (warstwa pod kaktusami z przodu). */
+  /** Kłęby — toczone po ziemi (obrót = dystans), lekki ukoś i podskok. */
   private drawTumbleweeds(g: Phaser.GameObjects.Graphics): void {
-    const { scaleMin, scaleMax, alpha, maxTravel } = BTTF.cactus.tumbleweed;
-    const cull = 16;
-    const farLimit = maxTravel - cull;
+    const { scaleMin, scaleMax, alpha } = BTTF.cactus.tumbleweed;
     const palette = {
       base: BTTF.colors.tumbleweed,
       hi: BTTF.colors.tumbleweedHi,
@@ -264,14 +267,17 @@ export class RetroGridBackground {
     };
 
     for (const t of this.activeTumbleweeds) {
-      if (t.travel > farLimit) continue;
+      if (t.travel > this.tumbleCross) continue;
 
-      const progress = t.travel / farLimit;
-      const depthEase = progress * progress;
-      const x = Phaser.Math.Linear(-55, GAME_WIDTH + 55, progress);
-      const y = Phaser.Math.Linear(t.yStart, t.yEnd, progress);
+      const pathT = Phaser.Math.Clamp(t.travel / this.tumbleCross, 0, 1);
+      const depthEase = pathT * pathT;
+      const radiusPx = 14 * t.scale * 0.82;
+      const roll = t.travel / radiusPx;
+      const bounce = Math.abs(Math.sin(roll)) * 5.5 * t.scale;
+      const x = this.tumbleStartX + t.travel;
+      const y = Phaser.Math.Linear(t.yStart, t.yEnd, pathT) - bounce;
       const scale = t.scale * Phaser.Math.Linear(scaleMin, scaleMax, depthEase);
-      drawPixelTumbleweed(g, x, y, scale, t.roll, palette, alpha);
+      drawPixelTumbleweed(g, x, y, scale, roll, palette, alpha);
     }
   }
 
