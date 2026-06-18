@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { TEXTURE } from "../art/SpriteTextures";
-import { BTTF, COLORS, GAME_WIDTH, GAME_HEIGHT } from "../config";
+import { BTTF, GAME_WIDTH, GAME_HEIGHT } from "../config";
 import type { Player } from "../entities/Player";
 
 export type DeloreanFlybyHooks = {
@@ -8,7 +8,7 @@ export type DeloreanFlybyHooks = {
 };
 
 /**
- * Easter egg: DeLorean przejeżdża przez dolną część planszy.
+ * Easter egg: DeLorean przejeżdża po dolnej „drodze”.
  * Kilka przejazdów na rundę; trafienie statkiem daje +88 pkt za każdy.
  */
 export class DeloreanFlyby {
@@ -40,8 +40,8 @@ export class DeloreanFlyby {
 
     if (this.car?.active) {
       const off =
-        (this.dir === 1 && this.car.x > GAME_WIDTH + 100) ||
-        (this.dir === -1 && this.car.x < -100);
+        (this.dir === 1 && this.car.x > GAME_WIDTH + 120) ||
+        (this.dir === -1 && this.car.x < -120);
       if (off) this.finishPass(elapsedMs);
     }
   }
@@ -56,24 +56,25 @@ export class DeloreanFlyby {
     this.caughtThisCar = false;
     this.dir = Math.random() < 0.5 ? 1 : -1;
     const y = GAME_HEIGHT * BTTF.flybyYRatio;
-    const x = this.dir === 1 ? -70 : GAME_WIDTH + 70;
+    const x = this.dir === 1 ? -80 : GAME_WIDTH + 80;
+    const tex = this.dir === 1 ? TEXTURE.deloreanR : TEXTURE.deloreanL;
 
-    const car = this.scene.physics.add.image(x, y, TEXTURE.delorean);
+    const car = this.scene.physics.add.image(x, y, tex);
     car.setDepth(6);
-    car.setFlipX(this.dir === -1);
-    (car.body as Phaser.Physics.Arcade.Body).setSize(72, 22).setOffset(8, 8);
+    car.setOrigin(0.5, 0.88);
+    (car.body as Phaser.Physics.Arcade.Body).setSize(90, 24).setOffset(11, 14);
     car.setVelocity(this.dir * BTTF.flybySpeed, 0);
     this.car = car;
 
     this.trails = this.scene.add.particles(0, 0, TEXTURE.particle, {
-      speed: { min: 40, max: 120 },
-      lifespan: 320,
-      scale: { start: 0.9, end: 0 },
-      alpha: { start: 0.85, end: 0 },
-      tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed, COLORS.yellow],
-      frequency: 28,
+      speed: { min: 30, max: 90 },
+      lifespan: 260,
+      scale: { start: 0.55, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed],
+      frequency: 50,
       follow: car,
-      followOffset: { x: this.dir === 1 ? -28 : 28, y: 4 },
+      followOffset: { x: this.dir === 1 ? -42 : 42, y: 2 },
     });
     this.trails.setDepth(5);
 
