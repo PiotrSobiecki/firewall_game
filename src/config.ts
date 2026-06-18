@@ -58,8 +58,11 @@ export const API_BASE =
     ? "http://localhost:8787"
     : "https://firewall-scores.piotr-sobiecki.workers.dev");
 
-/** Link do utworu na YouTube — podmienić przed publikacją. */
-export const YOUTUBE_URL = "https://www.youtube.com/watch?v=fiKG2Yb9goc";
+/** Link do utworu „Firewall” (streaming — Feature.fm / Next Music). */
+export const MUSIC_URL = "https://nextmusic.ffm.to/firewall";
+
+/** @deprecated Użyj MUSIC_URL */
+export const YOUTUBE_URL = MUSIC_URL;
 
 /**
  * Audio (PRD #27–28): utwór „Firewall" leci w pętli przez całą rozgrywkę.

@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, YOUTUBE_URL, LEADERBOARD_SIZE } from "../config";
+import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, MUSIC_URL, LEADERBOARD_SIZE } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { findPlayerIndex, qualifies, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores, submitScore } from "../systems/scoreApi";
@@ -25,7 +25,7 @@ function formatTime(ms: number): string {
   return `${(ms / 1000).toFixed(2)}s`;
 }
 
-/** Ekran końcowy: wynik + globalny ranking TOP 10 (z wpisem imienia) + retry + YouTube. */
+/** Ekran końcowy: wynik + ranking + retry + link do utworu. */
 export class EndScene extends Phaser.Scene {
   private bg!: RetroGridBackground;
 
@@ -61,8 +61,8 @@ export class EndScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     // przyciski (klik zawsze; Enter dopiero gdy nie ma już pola na imię)
-    const yt = this.makeButton(GAME_HEIGHT - 150, "▶ OBEJRZYJ NA YOUTUBE", COLOR_HEX.yellow);
-    yt.on("pointerdown", () => window.open(YOUTUBE_URL, "_blank", "noopener"));
+    const musicBtn = this.makeButton(GAME_HEIGHT - 150, "▶ POSŁUCHAJ FIREWALL", COLOR_HEX.yellow);
+    musicBtn.on("pointerdown", () => window.open(MUSIC_URL, "_blank", "noopener"));
     const retry = this.makeButton(GAME_HEIGHT - 94, "↻ ZAGRAJ JESZCZE RAZ", COLOR_HEX.green);
     retry.on("pointerdown", () => this.scene.start("GameScene"));
 

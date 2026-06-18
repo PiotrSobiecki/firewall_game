@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && vite build",
+    "deploy:pages": "npm run build && npx wrangler pages deploy dist --project-name firewall-game --commit-dirty=true",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest"
