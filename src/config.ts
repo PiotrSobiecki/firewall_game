@@ -142,7 +142,7 @@ export const BTTF = {
   menuDriveBetweenMs: { min: 2_000, max: 5_500 },
   /** Pixel-art DeLoreana z `public/delorean.png`. */
   delorean: {
-    displayScale: 0.17,
+    displayScale: 0.2,
     originY: 0.88,
     hitW: 82,
     hitH: 20,
