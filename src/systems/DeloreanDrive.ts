@@ -20,7 +20,7 @@ export function spawnDeloreanPass(
   dir: 1 | -1,
   depth = 3,
 ): DeloreanPass {
-  const { displayScale, originY } = BTTF.delorean;
+  const { displayScale, originY, rearFlameOffset } = BTTF.delorean;
   const y = GAME_HEIGHT * BTTF.flybyYRatio;
   const x = dir === 1 ? -90 : GAME_WIDTH + 90;
   const back = trailSide(dir);
@@ -40,7 +40,7 @@ export function spawnDeloreanPass(
     frequency: 36,
     angle: { min: back * 160, max: back * 200 },
     follow: car,
-    followOffset: { x: back * 50, y: -10 },
+    followOffset: { x: back * rearFlameOffset.x, y: rearFlameOffset.y },
   });
   rearFlames.setDepth(depth - 1);
 

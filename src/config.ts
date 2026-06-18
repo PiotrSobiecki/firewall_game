@@ -148,6 +148,8 @@ export const BTTF = {
     hitH: 20,
     hitOffsetX: 8,
     hitOffsetY: 14,
+    /** Pozycja emittera płomieni względem środka auta (x = w tył, y = w górę). */
+    rearFlameOffset: { x: 38, y: -24 },
   },
 } as const;
 
