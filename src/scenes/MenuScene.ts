@@ -4,6 +4,7 @@ import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { topName, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores } from "../systems/scoreApi";
 import { MusicController } from "../systems/MusicController";
+import { DeloreanMenuDrive } from "../systems/DeloreanDrive";
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
@@ -18,6 +19,7 @@ export class MenuScene extends Phaser.Scene {
   private music!: MusicController;
   private highText!: Phaser.GameObjects.Text;
   private marquee?: Phaser.GameObjects.Text;
+  private deloreanDrive!: DeloreanMenuDrive;
 
   constructor() {
     super("MenuScene");
@@ -26,6 +28,7 @@ export class MenuScene extends Phaser.Scene {
   create(): void {
     this.bg = new RetroGridBackground(this);
     this.music = new MusicController(this);
+    this.deloreanDrive = new DeloreanMenuDrive(this);
     this.marquee = undefined;
 
     this.highText = this.add
@@ -113,7 +116,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    this.bg.update(delta / 1000);
+    const dt = delta / 1000;
+    this.bg.update(dt);
+    this.deloreanDrive.update(dt);
     if (this.marquee) {
       this.marquee.x -= MARQUEE_SPEED * (delta / 1000);
       if (this.marquee.x < -this.marquee.width) this.marquee.x = GAME_WIDTH;

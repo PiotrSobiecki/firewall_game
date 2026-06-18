@@ -1,7 +1,7 @@
 import Phaser from "phaser";
-import { TEXTURE } from "../art/SpriteTextures";
-import { BTTF, GAME_WIDTH, GAME_HEIGHT } from "../config";
+import { BTTF, GAME_WIDTH } from "../config";
 import type { Player } from "../entities/Player";
+import { destroyDeloreanPass, spawnDeloreanPass, type DeloreanPass } from "./DeloreanDrive";
 
 export type DeloreanFlybyHooks = {
   onCollect: () => void;
@@ -15,9 +15,7 @@ export class DeloreanFlyby {
   private nextTriggerAtMs: number;
   private active = false;
   private caughtThisCar = false;
-  private car?: Phaser.Physics.Arcade.Image;
-  private trails?: Phaser.GameObjects.Particles.ParticleEmitter;
-  private dir: 1 | -1 = 1;
+  private pass?: DeloreanPass;
   private lastElapsedMs = 0;
 
   constructor(
@@ -38,10 +36,10 @@ export class DeloreanFlyby {
       return;
     }
 
-    if (this.car?.active) {
+    if (this.pass?.car.active) {
+      const { car, dir } = this.pass;
       const off =
-        (this.dir === 1 && this.car.x > GAME_WIDTH + 120) ||
-        (this.dir === -1 && this.car.x < -120);
+        (dir === 1 && car.x > GAME_WIDTH + 120) || (dir === -1 && car.x < -120);
       if (off) this.finishPass(elapsedMs);
     }
   }
@@ -54,29 +52,12 @@ export class DeloreanFlyby {
   private spawn(): void {
     this.active = true;
     this.caughtThisCar = false;
-    this.dir = Math.random() < 0.5 ? 1 : -1;
-    const y = GAME_HEIGHT * BTTF.flybyYRatio;
-    const x = this.dir === 1 ? -80 : GAME_WIDTH + 80;
-    const tex = this.dir === 1 ? TEXTURE.deloreanR : TEXTURE.deloreanL;
-
-    const car = this.scene.physics.add.image(x, y, tex);
-    car.setDepth(6);
-    car.setOrigin(0.5, 0.88);
+    const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
+    const visual = spawnDeloreanPass(this.scene, dir, 6);
+    const car = this.scene.physics.add.existing(visual.car) as Phaser.Physics.Arcade.Image;
     (car.body as Phaser.Physics.Arcade.Body).setSize(90, 24).setOffset(11, 14);
-    car.setVelocity(this.dir * BTTF.flybySpeed, 0);
-    this.car = car;
-
-    this.trails = this.scene.add.particles(0, 0, TEXTURE.particle, {
-      speed: { min: 30, max: 90 },
-      lifespan: 260,
-      scale: { start: 0.55, end: 0 },
-      alpha: { start: 0.7, end: 0 },
-      tint: [BTTF.colors.flameOrange, BTTF.colors.flameRed],
-      frequency: 50,
-      follow: car,
-      followOffset: { x: this.dir === 1 ? -42 : 42, y: 2 },
-    });
-    this.trails.setDepth(5);
+    car.setVelocity(dir * BTTF.flybySpeed, 0);
+    this.pass = { ...visual, car };
 
     this.scene.physics.add.overlap(this.player, car, () => {
       if (this.caughtThisCar) return;
@@ -93,10 +74,8 @@ export class DeloreanFlyby {
   }
 
   private cleanupCar(): void {
-    this.trails?.destroy();
-    this.trails = undefined;
-    this.car?.destroy();
-    this.car = undefined;
+    destroyDeloreanPass(this.pass);
+    this.pass = undefined;
   }
 
   destroy(): void {
@@ -104,3 +83,6 @@ export class DeloreanFlyby {
     this.active = false;
   }
 }
+
+// re-export dla wygody importów w scenach
+export { DeloreanMenuDrive } from "./DeloreanDrive";

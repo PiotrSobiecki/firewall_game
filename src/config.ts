@@ -136,6 +136,8 @@ export const BTTF = {
   flybyBonus: 88,
   /** Na perspektywicznej „drodze” u dołu ekranu (nie w powietrzu). */
   flybyYRatio: 0.9,
+  /** Pauza między przejazdami na ekranie startowym. */
+  menuDriveBetweenMs: { min: 2_000, max: 5_500 },
 } as const;
 
 /** Tuning gracza (do playtestu). */
