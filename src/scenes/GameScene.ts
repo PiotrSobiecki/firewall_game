@@ -220,13 +220,15 @@ export class GameScene extends Phaser.Scene {
     enemy.spawn(type, x, -24, level.speedMult, now);
   }
 
-  private fireBullet(x: number, y: number, vx = 0): void {
+  private fireBullet(x: number, y: number, vx = 0, tint?: number): void {
     const bullet = this.bullets.get(x, y, TEXTURE.bullet) as Phaser.Physics.Arcade.Image | null;
     if (!bullet) return;
     bullet.enableBody(true, x, y, true, true);
     (bullet.body as Phaser.Physics.Arcade.Body).setCircle(BULLET.radius, 6 - BULLET.radius, 6 - BULLET.radius);
     bullet.setDepth(4);
     bullet.setVelocity(vx, BULLET.speed);
+    if (tint !== undefined) bullet.setTint(tint);
+    else bullet.clearTint();
   }
 
   /** Strzał gracza — wyłącznie w trybie PacketStream (auto-fire w górę). */
@@ -272,10 +274,13 @@ export class GameScene extends Phaser.Scene {
     const kiy = (down ? 1 : 0) - (up ? 1 : 0);
     if (kix !== 0 || kiy !== 0) {
       this.player.drive(kix, kiy); // klawiatura ma pierwszeństwo
+      this.player.setSteerX(kix);
     } else if (this.joyActive) {
       this.player.driveProportional(this.joyVecX, this.joyVecY); // joystick: prędkość ~ wychylenie
+      this.player.setSteerX(this.joyVecX);
     } else {
       this.player.drive(0, 0);
+      this.player.setSteerX(0);
     }
 
     // ShieldBoost: większy promień + mocniejsze odbicia na czas buffa

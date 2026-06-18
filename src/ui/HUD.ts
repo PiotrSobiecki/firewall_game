@@ -239,13 +239,18 @@ export class HUD {
   /** Potwierdzenie zniszczenia mini-bossa — od teraz liczy się PO BOSSIE X/100. */
   flashBossDefeated(): void {
     const t = this.scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.28, "BOSS USUNIĘTY!\n+100 pkt do wygranej", {
-        fontFamily: "monospace",
-        fontSize: "20px",
-        color: COLOR_HEX.green,
-        fontStyle: "bold",
-        align: "center",
-      })
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT * 0.28,
+        `${BTTF.boss.defeatBanner}\n+100 pkt do wygranej`,
+        {
+          fontFamily: "monospace",
+          fontSize: "18px",
+          color: COLOR_HEX.yellow,
+          fontStyle: "bold",
+          align: "center",
+        },
+      )
       .setOrigin(0.5)
       .setDepth(17);
     this.scene.tweens.add({
@@ -260,11 +265,12 @@ export class HUD {
   /** Alarm wejścia mini-bossa. */
   flashBoss(): void {
     const t = this.scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.3, "⚠ BOSS ⚠", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.3, BTTF.boss.spawnBanner, {
         fontFamily: "monospace",
-        fontSize: "26px",
-        color: COLOR_HEX.magenta,
+        fontSize: "22px",
+        color: COLOR_HEX.yellow,
         fontStyle: "bold",
+        align: "center",
       })
       .setOrigin(0.5)
       .setDepth(17);

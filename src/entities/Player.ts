@@ -15,6 +15,10 @@ export class Player extends Phaser.Physics.Arcade.Image {
   private engineL?: Phaser.GameObjects.Particles.ParticleEmitter;
   private engineR?: Phaser.GameObjects.Particles.ParticleEmitter;
   private engineCore?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private steerX = 0;
+  private pilotLeanX = 0;
+  private cockpitMaskGfx?: Phaser.GameObjects.Graphics;
+  private cockpitMask?: Phaser.Display.Masks.GeometryMask;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, TEXTURE.player);
@@ -38,7 +42,12 @@ export class Player extends Phaser.Physics.Arcade.Image {
       this.pilot.setOrigin(0.5, 0.5);
       this.pilot.setScale(scale);
       this.pilot.setAngle(angle);
-      this.pilot.setDepth(7);
+      this.pilot.setDepth(6.5);
+
+      this.cockpitMaskGfx = scene.add.graphics();
+      this.cockpitMaskGfx.setVisible(false);
+      this.cockpitMask = this.cockpitMaskGfx.createGeometryMask();
+      this.pilot.setMask(this.cockpitMask);
     }
 
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -100,18 +109,50 @@ export class Player extends Phaser.Physics.Arcade.Image {
     this.engineCore?.setAlpha(moving ? 0.9 : 0.45);
   }
 
-  /** Twarz w okienku — offset od środka statku (nie od rogu tekstury). */
+  /** Twarz w okienku — przycięta maską kokpitu, przesuwa się tylko w jego obrębie. */
   private syncPilot(): void {
     if (!this.pilot) return;
-    const { localX, localY, scale } = BTTF.playerPilot;
+    const { localX, localY, scale, angle, leanMax, leanSmooth, leanAngleMax } = BTTF.playerPilot;
     const { w, h } = SPRITE.player;
     const sx = this.displayWidth / w;
     const sy = this.displayHeight / h;
     const s = scale * ((sx + sy) / 2);
-    this.pilot.setPosition(this.x + localX * sx, this.y + localY * sy);
+    const k = w / 56;
+    const windowHalfW = 7 * k;
+    const windowHalfH = 8 * k;
+    const winHalfDisplayW = windowHalfW * sx;
+    const winHalfDisplayH = windowHalfH * sy;
+    const cockpitX = this.x + localX * sx;
+    const cockpitY = this.y + localY * sy;
+    const maxLean = Math.min(leanMax, windowHalfW * 0.92);
+    const targetLean = this.steerX * maxLean;
+    this.pilotLeanX = Phaser.Math.Linear(this.pilotLeanX, targetLean, leanSmooth);
+    const leanX = this.pilotLeanX * sx;
+    this.pilot.setPosition(cockpitX + leanX, cockpitY);
     this.pilot.setScale(s);
+    this.pilot.setAngle(angle + (maxLean > 0 ? (this.pilotLeanX / maxLean) * leanAngleMax : 0));
     this.pilot.setAlpha(this.alpha);
-    this.pilot.setDepth(this.depth + 1);
+    this.pilot.setDepth(this.depth + 0.5);
+    this.syncCockpitMask(cockpitX, cockpitY, winHalfDisplayW, winHalfDisplayH, (sx + sy) / 2);
+  }
+
+  /** Maska = ciemne okienko kokpitu na teksturze statku. */
+  private syncCockpitMask(
+    cx: number,
+    cy: number,
+    halfW: number,
+    halfH: number,
+    avgScale: number,
+  ): void {
+    if (!this.cockpitMaskGfx) return;
+    this.cockpitMaskGfx.clear();
+    this.cockpitMaskGfx.fillStyle(0xffffff);
+    this.cockpitMaskGfx.fillRoundedRect(cx - halfW, cy - halfH, halfW * 2, halfH * 2, 2.5 * avgScale);
+  }
+
+  /** Poziome sterowanie (-1..1) — przesuwa głowę w okienku kokpitu. */
+  setSteerX(x: number): void {
+    this.steerX = Phaser.Math.Clamp(x, -1, 1);
   }
 
   preUpdate(): void {
@@ -137,6 +178,9 @@ export class Player extends Phaser.Physics.Arcade.Image {
   }
 
   destroy(fromScene?: boolean): void {
+    this.pilot?.clearMask();
+    this.cockpitMask?.destroy();
+    this.cockpitMaskGfx?.destroy();
     this.pilot?.destroy();
     this.engineL?.destroy();
     this.engineR?.destroy();
@@ -149,11 +193,14 @@ export class Player extends Phaser.Physics.Arcade.Image {
     const len = Math.hypot(dx, dy) || 1;
     this.setVelocity((dx / len) * PLAYER.speed, (dy / len) * PLAYER.speed);
     this.y = Phaser.Math.Clamp(this.y, PLAYER.zoneTop, GAME_HEIGHT - 24);
+    if (dx !== 0) this.steerX = dx > 0 ? 1 : -1;
+    else if (len <= 0) this.steerX = 0;
   }
 
   driveProportional(sx: number, sy: number): void {
     this.setVelocity(sx * PLAYER.speed, sy * PLAYER.speed);
     this.y = Phaser.Math.Clamp(this.y, PLAYER.zoneTop, GAME_HEIGHT - 24);
+    this.steerX = Phaser.Math.Clamp(sx, -1, 1);
   }
 
   respawn(x: number, y: number, now: number): void {
@@ -161,6 +208,8 @@ export class Player extends Phaser.Physics.Arcade.Image {
     this.invulnUntil = now + PLAYER.respawnIframesMs;
     this.setPosition(x, y);
     this.setVelocity(0, 0);
+    this.steerX = 0;
+    this.pilotLeanX = 0;
   }
 
   takeDamage(amount: number, now: number): boolean {

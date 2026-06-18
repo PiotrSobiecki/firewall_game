@@ -123,8 +123,16 @@ export const BTTF = {
     fluxBlue: 0x44ccff,
     flameOrange: 0xff6600,
     flameRed: 0xff2200,
-    cactus: 0x143828,
-    cactusHi: 0x1f5c36,
+    cactus: 0x1a4a2e,
+    cactusHi: 0x2d7a48,
+    cactusOutline: 0x0c2418,
+    scrub: 0x4a6238,
+    scrubHi: 0x6a8450,
+    scrubOutline: 0x2a3820,
+    tumbleweed: 0xb89458,
+    tumbleweedHi: 0xd4b878,
+    tumbleweedOutline: 0x6e5428,
+    tumbleweedStrand: 0xc9a866,
   },
   /** Kaktusy w parallaxie przy drodze (menu, gra, EndScene). */
   cactus: {
@@ -136,6 +144,48 @@ export const BTTF = {
     roadDrift: 0.065,
     /** Co ile px w cyklu pojawia się kolejny kaktus (mniej = gęściej). */
     spacing: 24,
+    /** Nieruchome kaktusy pod horyzontem (daleko w tle). */
+    background: {
+      count: 13,
+      /** px poniżej linii horyzontu. */
+      yBase: 6,
+      ySpread: 20,
+      scaleMin: 0.16,
+      scaleMax: 0.3,
+      alpha: 0.52,
+    },
+    /** Nieruchome krzaki — rzadkie, po całej pustyni (nad pasem bohaterki). */
+    scrub: {
+      count: 8,
+      /** px poniżej horyzontu (min / max rozpiętość w dół). */
+      yMin: 48,
+      yMax: 248,
+      scaleMin: 0.38,
+      scaleMax: 0.62,
+      scrub: 0x4a6238,
+      scrubHi: 0x6a8450,
+      alpha: 0.62,
+    },
+    /** Tumbleweed — pojedynczo, max 2, leci po ukosie przez pustynię w prawo. */
+    tumbleweed: {
+      scrollSpeed: 58,
+      maxOnScreen: 2,
+      minTravelGap: 200,
+      spawnDelayMs: { min: 2_800, max: 6_500 },
+      maxTravel: 480,
+      yOffset: 8,
+      /** Górny pas pustyni (px pod horyzontem). */
+      yMin: 68,
+      /** px nad dolną linią pustyni — nie wchodzi w pas bohaterki na menu. */
+      groundClearance: 50,
+      /** Spadek/wzrost Y (px) między lewą a prawą krawędzią — różne ukośne tory. */
+      slantYMin: -34,
+      slantYMax: 36,
+      scaleMin: 0.78,
+      scaleMax: 1.38,
+      alpha: 0.92,
+      rollSpeed: 0.22,
+    },
   },
   /** Linia horyzontu (ułamek wysokości ekranu, od góry). Środek słońca leży na niej. */
   sunYRatio: 0.8,
@@ -151,13 +201,27 @@ export const BTTF = {
   flybyYRatio: 0.9,
   /** Pauza między przejazdami na ekranie startowym. */
   menuDriveBetweenMs: { min: 2_000, max: 5_500 },
-  /** Bohaterka na ekranie startowym (`public/menu_hero.png`) — przy lewej krawędzi drogi, obok kaktusów. */
+  /** Bohaterka na ekranie startowym (`src/assets/menu_hero.png`) — przy lewej krawędzi drogi, obok kaktusów. */
   menuHero: {
     scale: 0.3,
     xRatio: 0.15,
     yRatio: 0.992,
     /** Nad DeLoreanem na menu (auto = menuDeloreanDepth). */
     depth: 5,
+    /** Chodzenie ← → / A D po drodze na menu. */
+    walkSpeed: 92,
+    xMin: 52,
+    xMax: GAME_WIDTH - 52,
+    /** Czas jednej klatki animacji chodu (ms). */
+    walkFrameMs: 130,
+    /** Klatki chodu −5% względem idle (wyrównanie stóp: walkFrameFootLift). */
+    walkScaleMul: 0.95,
+    /** Podniesienie klatek chodu (px tekstury) — wyrównanie stóp do menu_hero. */
+    walkFrameFootLift: [28, 34, 36, 30] as const,
+    /** Lekkie uniesienie w chodzie (px ekranu, ujemne = w górę) — bez opadania przy starcie. */
+    walkGroundYOffset: -3,
+    /** Korekta aury na ręce w chodzie (px klatki, ujemne = w górę). */
+    walkShieldExtraY: -36,
     /** Środek aury tarczy na prawej pięści (px tekstury, anchor postaci 0.5/1). */
     shieldOffset: { x: 100, y: -390 },
     /** Promień aury w px tekstury (skaluje się z postacią). */
@@ -174,17 +238,30 @@ export const BTTF = {
     localY: -14,
     scale: 0.068,
     angle: 0,
-    windowHalfW: 11,
-    windowHalfH: 13,
+    windowHalfW: 10,
+    windowHalfH: 11.5,
+    /** Przesunięcie głowy w px tekstury statku przy pełnym skręcie (clamp do okienka). */
+    leanMax: 5.5,
+    /** Wygładzanie ruchu głowy (0–1, wyżej = szybciej). */
+    leanSmooth: 0.38,
+    /** Lekki obrót głowy przy skręcie (stopnie). */
+    leanAngleMax: 9,
   },
   /** Animowane ognie silnika statku gracza (offset od środka sprite’a 80×80). */
   playerEngine: {
     nozzleY: 36,
     nozzleX: 9,
   },
+  /** Mini-boss — skorumpowany wehikuł czasu (motyw BTTF). */
+  boss: {
+    name: "PARADOKS FLUXU",
+    spawnBanner: "⚠ PARADOKS FLUXU ⚠",
+    defeatBanner: "LINIA CZASU NAPRAWIONA!",
+    bulletTint: 0xff6600,
+  },
   /** Pixel-art DeLoreana z `public/delorean.png`. */
   delorean: {
-    displayScale: 0.2,
+    displayScale: 0.24,
     originY: 0.88,
     hitW: 82,
     hitH: 20,
@@ -335,17 +412,18 @@ export const PLAYER_SHOT = {
  */
 export const BOSS = {
   spawnAtScore: 900,
-  hp: 10, // liczba trafień (tarcza/strzał) do pokonania
-  enterSpeed: 70, // schodzenie wejściowe
-  strafeSpeed: 95, // ruch w poziomie u góry
-  strafeY: 160, // docelowa wysokość patrolu (pod HUD)
+  hp: 10,
+  /** Skala wyświetlania na teksturze 120×104. */
+  displayScale: 1.14,
+  bodyRadius: 42,
+  enterSpeed: 98,
+  strafeSpeed: 152,
+  strafeY: 148,
   fireEveryMs: 1500,
-  contactDamage: 30,
+  contactDamage: 40,
   bonus: 150,
-  hitCooldownMs: 220, // min. odstęp między trafieniami tarczy
-  // nurkowanie: boss okresowo zjeżdża w zasięg gracza (by dało się go bić tarczą).
-  // Częściej i wolniej = dłużej w zasięgu łuku tarczy, więc realnie wygrywalny.
-  diveEveryMs: 3200,
-  diveY: 470,
-  diveSpeed: 170,
+  hitCooldownMs: 220,
+  diveEveryMs: 1350,
+  diveY: 405,
+  diveSpeed: 300,
 } as const;

@@ -19,6 +19,10 @@ export const TEXTURE = {
   smoke: "particle_smoke",
   delorean: "delorean",
   menuHero: "menu_hero",
+  menuHeroWalk1: "menu_hero_walk_1",
+  menuHeroWalk2: "menu_hero_walk_2",
+  menuHeroWalk3: "menu_hero_walk_3",
+  menuHeroWalk4: "menu_hero_walk_4",
   pilotFace: "pilot_face",
 } as const;
 
@@ -28,7 +32,7 @@ export const SPRITE = {
   trojan: { w: 44, h: 44 },
   worm: { w: 36, h: 36 },
   spyware: { w: 36, h: 36 },
-  boss: { w: 92, h: 80 },
+  boss: { w: 120, h: 104 },
   bullet: { w: 12, h: 12 },
   playerBullet: { w: 12, h: 16 },
   powerup: { w: 28, h: 28 },
@@ -83,6 +87,35 @@ function drawFluxCapacitor(
   g.lineBetween(cx, cy - 3 * k, cx - 5 * k, cy + 2 * k);
   g.lineBetween(cx, cy - 3 * k, cx + 5 * k, cy + 2 * k);
   g.lineBetween(cx - 5 * k, cy + 2 * k, cx + 5 * k, cy + 2 * k);
+}
+
+/** Przeciążony kapasitor fluxu — czerwone / pomarańczowe „beczki” (boss BTTF). */
+function drawCorruptedFluxCapacitor(
+  g: Phaser.GameObjects.Graphics,
+  cx: number,
+  cy: number,
+  k: number,
+): void {
+  const { flameOrange, flameRed, fluxBlue } = BTTF.colors;
+  const tube = (x: number, y: number, r: number, hot: boolean) => {
+    g.fillStyle(hot ? flameRed : flameOrange, 0.35);
+    g.fillCircle(x, y, r + 4 * k);
+    g.fillStyle(0x2a0810, 1);
+    g.fillCircle(x, y, r);
+    g.lineStyle(1.5 * k, hot ? flameRed : flameOrange, 1);
+    g.strokeCircle(x, y, r);
+    g.fillStyle(0xffffff, 0.9);
+    g.fillCircle(x, y - r * 0.2, r * 0.3);
+  };
+  tube(cx, cy - 8 * k, 5 * k, true);
+  tube(cx - 8 * k, cy + 6 * k, 4.2 * k, false);
+  tube(cx + 8 * k, cy + 6 * k, 4.2 * k, false);
+  g.lineStyle(1.2 * k, flameOrange, 0.9);
+  g.lineBetween(cx, cy - 4 * k, cx - 6 * k, cy + 3 * k);
+  g.lineBetween(cx, cy - 4 * k, cx + 6 * k, cy + 3 * k);
+  g.lineBetween(cx - 6 * k, cy + 3 * k, cx + 6 * k, cy + 3 * k);
+  g.lineStyle(1 * k, fluxBlue, 0.45);
+  g.lineBetween(cx - 10 * k, cy - 2 * k, cx + 10 * k, cy + 4 * k);
 }
 
 /** Kadłub statku bez szyby — szyba i głowa pilotki doklejane osobno. */
@@ -392,63 +425,138 @@ function createSpywareTexture(scene: Phaser.Scene): void {
   g.destroy();
 }
 
-/** Mini-boss — duży opancerzony rdzeń malware („Rootkit"): groźny i czytelny. */
+/** Mini-boss — skorumpowany wehikuł czasu „Paradoks Fluxu” (DeLorean + malware). */
 function createBossTexture(scene: Phaser.Scene): void {
   const { w, h } = SPRITE.boss;
   const g = scene.make.graphics({ x: 0, y: 0 });
   const cx = w / 2;
   const cy = h / 2;
+  const k = w / 56;
+  const { deloreanSilver, deloreanDark, fluxBlue, flameOrange, flameRed } = BTTF.colors;
 
-  // poświata
-  g.fillStyle(COLORS.magenta, 0.12);
-  g.fillEllipse(cx, cy, w, h);
+  // aura przeciążenia fluxu
+  g.fillStyle(fluxBlue, 0.1);
+  g.fillEllipse(cx, cy + 4 * k, w * 0.92, h * 0.88);
+  g.fillStyle(flameOrange, 0.08);
+  g.fillEllipse(cx, cy + 8 * k, w * 0.7, h * 0.55);
 
-  // skrzydła pancerza (boczne bloki)
-  g.fillStyle(0x2a0a22, 1);
-  g.lineStyle(2, COLORS.magenta, 0.9);
-  for (const s of [-1, 1]) {
-    const x0 = cx + s * 22;
-    g.fillRoundedRect(s < 0 ? x0 - 18 : x0, cy - 16, 18, 32, 4);
-    g.strokeRoundedRect(s < 0 ? x0 - 18 : x0, cy - 16, 18, 32, 4);
-    // dysze
-    g.fillStyle(COLORS.yellow, 0.8);
-    g.fillRect(s < 0 ? x0 - 14 : x0 + 4, cy + 16, 10, 4);
-    g.fillStyle(0x2a0a22, 1);
-  }
+  // płomienie silnika (tył statku — dół sprite’a)
+  g.fillStyle(flameOrange, 0.55);
+  g.fillEllipse(cx - 14 * k, h - 6 * k, 14 * k, 8 * k);
+  g.fillEllipse(cx + 14 * k, h - 6 * k, 14 * k, 8 * k);
+  g.fillStyle(flameRed, 0.75);
+  g.fillEllipse(cx - 14 * k, h - 5 * k, 8 * k, 5 * k);
+  g.fillEllipse(cx + 14 * k, h - 5 * k, 8 * k, 5 * k);
 
-  // centralny sześciokątny korpus
-  const hex = (r: number, ry: number): Phaser.Math.Vector2[] => {
-    const pts: Phaser.Math.Vector2[] = [];
-    for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 3) * i - Math.PI / 2;
-      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * r, cy + Math.sin(a) * ry));
-    }
-    return pts;
+  // skrzydła gull-wing (DeLorean)
+  const wing = (s: number) => {
+    const pts = [
+      new Phaser.Math.Vector2(cx + s * 10 * k, 22 * k),
+      new Phaser.Math.Vector2(cx + s * 28 * k, 28 * k),
+      new Phaser.Math.Vector2(cx + s * 26 * k, 42 * k),
+      new Phaser.Math.Vector2(cx + s * 12 * k, 40 * k),
+    ];
+    g.fillStyle(deloreanDark, 1);
+    g.fillPoints(pts, true, true);
+    g.lineStyle(2 * k, deloreanSilver, 0.95);
+    g.strokePoints(pts, true, true);
+    g.lineStyle(1 * k, fluxBlue, 0.35);
+    g.lineBetween(cx + s * 12 * k, 26 * k, cx + s * 22 * k, 32 * k);
   };
-  g.fillStyle(0x1a0a26, 1);
-  g.fillPoints(hex(26, 30), true, true);
-  g.lineStyle(3, COLORS.magenta, 1);
-  g.strokePoints(hex(26, 30), true, true);
-  g.lineStyle(1.5, COLORS.yellow, 0.5);
-  g.strokePoints(hex(18, 21), true, true);
+  wing(-1);
+  wing(1);
 
-  // wielkie złowrogie oko-rdzeń
-  g.fillStyle(COLORS.magenta, 0.3);
-  g.fillCircle(cx, cy, 14);
-  g.fillStyle(COLORS.yellow, 1);
-  g.fillCircle(cx, cy, 9);
-  g.fillStyle(0x1a0010, 1);
-  g.fillCircle(cx, cy, 5);
-  g.fillStyle(0xffffff, 0.9);
-  g.fillCircle(cx - 2, cy - 2, 2);
+  // kadłub — poszerzony flux interceptor
+  const hull = [
+    new Phaser.Math.Vector2(cx, 6 * k),
+    new Phaser.Math.Vector2(cx + 16 * k, 22 * k),
+    new Phaser.Math.Vector2(cx + 18 * k, 42 * k),
+    new Phaser.Math.Vector2(cx + 11 * k, 54 * k),
+    new Phaser.Math.Vector2(cx - 11 * k, 54 * k),
+    new Phaser.Math.Vector2(cx - 18 * k, 42 * k),
+    new Phaser.Math.Vector2(cx - 16 * k, 22 * k),
+  ];
+  g.fillStyle(deloreanDark, 1);
+  g.fillPoints(hull, true, true);
+  g.fillStyle(deloreanSilver, 1);
+  g.fillPoints(
+    [
+      new Phaser.Math.Vector2(cx, 8 * k),
+      new Phaser.Math.Vector2(cx + 14 * k, 23 * k),
+      new Phaser.Math.Vector2(cx + 15 * k, 40 * k),
+      new Phaser.Math.Vector2(cx + 9 * k, 50 * k),
+      new Phaser.Math.Vector2(cx - 9 * k, 50 * k),
+      new Phaser.Math.Vector2(cx - 15 * k, 40 * k),
+      new Phaser.Math.Vector2(cx - 14 * k, 23 * k),
+    ],
+    true,
+    true,
+  );
 
-  // kolce u dołu
-  g.fillStyle(COLORS.magenta, 1);
-  for (let i = -2; i <= 2; i++) {
-    const x = cx + i * 10;
-    g.fillTriangle(x - 4, cy + 26, x + 4, cy + 26, x, cy + 34);
+  // pas biegnący przez drzwi
+  g.lineStyle(2 * k, deloreanDark, 0.85);
+  g.lineBetween(cx - 15 * k, 32 * k, cx + 15 * k, 32 * k);
+  g.lineStyle(1 * k, flameOrange, 0.55);
+  g.lineBetween(cx - 12 * k, 34 * k, cx + 12 * k, 34 * k);
+
+  // kokpit — złowrogie czerwone okno
+  g.fillStyle(0x1a0408, 1);
+  g.fillRoundedRect(cx - 8 * k, 12 * k, 16 * k, 18 * k, 2 * k);
+  g.lineStyle(1.5 * k, deloreanSilver, 0.9);
+  g.strokeRoundedRect(cx - 8.5 * k, 11.5 * k, 17 * k, 19 * k, 2.5 * k);
+  g.fillStyle(flameRed, 0.85);
+  g.fillCircle(cx, 22 * k, 5.5 * k);
+  g.fillStyle(COLORS.magenta, 0.35);
+  g.fillCircle(cx, 22 * k, 7 * k);
+  g.fillStyle(0xffffff, 0.8);
+  g.fillCircle(cx - 1.5 * k, 20.5 * k, 1.2 * k);
+
+  // wyświetlacz czasu — „88” (BTTF)
+  g.fillStyle(0x120008, 1);
+  g.fillRoundedRect(cx - 11 * k, 36 * k, 22 * k, 9 * k, 1.5 * k);
+  g.lineStyle(1 * k, flameRed, 0.85);
+  g.strokeRoundedRect(cx - 11 * k, 36 * k, 22 * k, 9 * k, 1.5 * k);
+  g.fillStyle(flameOrange, 1);
+  g.fillRect(cx - 8 * k, 38.5 * k, 5 * k, 4 * k);
+  g.fillRect(cx - 1 * k, 38.5 * k, 5 * k, 4 * k);
+  g.fillRect(cx + 6 * k, 38.5 * k, 5 * k, 4 * k);
+  g.fillRect(cx + 3 * k, 38.5 * k, 2 * k, 4 * k);
+  g.fillRect(cx + 10 * k, 38.5 * k, 2 * k, 4 * k);
+
+  drawCorruptedFluxCapacitor(g, cx, 30 * k, k);
+
+  // zębiska — kolce z nosa, szczęki i skrzydeł (agresywny malware)
+  g.fillStyle(flameRed, 1);
+  for (const s of [-1, 1]) {
+    g.fillTriangle(cx + s * 4 * k, 6 * k, cx + s * 14 * k, 18 * k, cx + s * 1 * k, 18 * k);
+    g.fillTriangle(cx + s * 9 * k, 12 * k, cx + s * 18 * k, 23 * k, cx + s * 5 * k, 22 * k);
+    g.fillTriangle(cx + s * 22 * k, 30 * k, cx + s * 30 * k, 38 * k, cx + s * 20 * k, 36 * k);
+  }
+  for (let i = -3; i <= 3; i++) {
+    const tx = cx + i * 6.5 * k;
+    g.fillTriangle(tx - 3 * k, 46 * k, tx, 58 * k, tx + 3 * k, 46 * k);
+  }
+  g.fillStyle(COLORS.magenta, 0.9);
+  g.fillTriangle(cx - 4 * k, 9 * k, cx, 4 * k, cx + 4 * k, 9 * k);
+  g.fillStyle(0xffffff, 0.75);
+  for (const s of [-1, 1]) {
+    g.fillCircle(cx + s * 8 * k, 12 * k, 1.4 * k);
   }
 
+  // glitch scan — malware na linii czasu
+  g.lineStyle(2, COLORS.magenta, 0.5);
+  g.lineBetween(cx - 24 * k, 17 * k, cx + 24 * k, 17 * k);
+  g.lineStyle(1.5, flameRed, 0.45);
+  g.lineBetween(cx - 20 * k, 44 * k, cx + 20 * k, 44 * k);
+
+  g.lineStyle(2 * k, deloreanSilver, 1);
+  g.strokePoints(hull, true, true);
+  g.lineStyle(1 * k, fluxBlue, 0.5);
+  g.strokePoints(hull, true, true);
+
+  if (scene.textures.exists(TEXTURE.boss)) {
+    scene.textures.remove(TEXTURE.boss);
+  }
   g.generateTexture(TEXTURE.boss, w, h);
   g.destroy();
 }

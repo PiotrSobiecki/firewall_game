@@ -13,6 +13,13 @@ function formatTime(ms: number): string {
 }
 
 const MARQUEE_SPEED = 70; // px/s
+const MENU_START_Y = GAME_HEIGHT * 0.55;
+const MENU_HELP_Y = MENU_START_Y + 38;
+
+const CONTROLS_DESKTOP =
+  "ENTER / klik — START · ← → / A D — chodzenie · SPACJA = tarcza · M = muzyka";
+const CONTROLS_MOBILE =
+  "Klik START · lewy dół: joystick (ruch)\nprawy dół: przytrzymaj TARCZA";
 
 /** Ekran startowy: tytuł + HIGH SCORE + START + przewijany TOP 10 na dole. */
 export class MenuScene extends Phaser.Scene {
@@ -21,6 +28,7 @@ export class MenuScene extends Phaser.Scene {
   private highText!: Phaser.GameObjects.Text;
   private marquee?: Phaser.GameObjects.Text;
   private deloreanDrive!: DeloreanMenuDrive;
+  private menuHero!: MenuHeroAnimator;
 
   constructor() {
     super("MenuScene");
@@ -32,7 +40,7 @@ export class MenuScene extends Phaser.Scene {
     this.deloreanDrive = new DeloreanMenuDrive(this);
     this.marquee = undefined;
 
-    new MenuHeroAnimator(this);
+    this.menuHero = new MenuHeroAnimator(this);
 
     this.highText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "TOP DEFENDER: —", {
@@ -60,7 +68,7 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const start = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.62, "▶ START", {
+      .text(GAME_WIDTH / 2, MENU_START_Y, "▶ START", {
         fontFamily: "monospace",
         fontSize: "28px",
         color: COLOR_HEX.green,
@@ -68,14 +76,26 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    this.tweens.add({ targets: start, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
+    this.tweens.add({
+      targets: start,
+      alpha: 0.3,
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+    });
 
+    const isTouch = this.sys.game.device.input.touch;
     this.add
       .text(
         GAME_WIDTH / 2,
-        GAME_HEIGHT * 0.62 + 40,
-        "ENTER / klik — ruch: ← → ↑ ↓ / WASD · SPACJA = tarcza · M = muzyka",
-        { fontFamily: "monospace", fontSize: "11px", color: COLOR_HEX.yellow },
+        MENU_HELP_Y,
+        isTouch ? CONTROLS_MOBILE : CONTROLS_DESKTOP,
+        {
+          fontFamily: "monospace",
+          fontSize: isTouch ? "12px" : "11px",
+          color: COLOR_HEX.yellow,
+          align: "center",
+        },
       )
       .setOrigin(0.5);
 
@@ -122,6 +142,7 @@ export class MenuScene extends Phaser.Scene {
     const dt = delta / 1000;
     this.bg.update(dt);
     this.deloreanDrive.update(dt);
+    this.menuHero.update(dt);
     if (this.marquee) {
       this.marquee.x -= MARQUEE_SPEED * (delta / 1000);
       if (this.marquee.x < -this.marquee.width) this.marquee.x = GAME_WIDTH;
