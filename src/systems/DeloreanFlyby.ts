@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BTTF, GAME_WIDTH } from "../config";
+import { BTTF, GAME_WIDTH, PLAYER } from "../config";
 import type { Player } from "../entities/Player";
 import { destroyDeloreanPass, spawnDeloreanPass, type DeloreanPass } from "./DeloreanDrive";
 
@@ -7,7 +7,13 @@ export type DeloreanFlybyHooks = {
   onCollect: () => void;
 };
 
-const CATCH_RADIUS = 44;
+/** Czy statek nachodzi na przejeżdżającego DeLoreana (prostokąt + promień gracza). */
+function canCatchDelorean(player: Player, car: Phaser.GameObjects.Image): boolean {
+  const { catchPadX, catchPadY } = BTTF.delorean;
+  const padX = Math.max(catchPadX, car.displayWidth * 0.42) + PLAYER.bodyRadius;
+  const padY = Math.max(catchPadY, car.displayHeight * 0.45) + PLAYER.bodyRadius;
+  return Math.abs(player.x - car.x) < padX && Math.abs(player.y - car.y) < padY;
+}
 
 /**
  * Easter egg: DeLorean przejeżdża po dolnej „drodze”.
@@ -43,15 +49,11 @@ export class DeloreanFlyby {
     const { car, dir } = this.pass;
     car.x += dir * BTTF.flybySpeed * dt;
 
-    if (!this.caughtThisCar) {
-      const dx = car.x - this.player.x;
-      const dy = car.y - this.player.y;
-      if (dx * dx + dy * dy <= CATCH_RADIUS * CATCH_RADIUS) {
-        this.caughtThisCar = true;
-        this.hooks.onCollect();
-        this.finishPass(elapsedMs);
-        return;
-      }
+    if (!this.caughtThisCar && canCatchDelorean(this.player, car)) {
+      this.caughtThisCar = true;
+      this.hooks.onCollect();
+      this.finishPass(elapsedMs);
+      return;
     }
 
     const off =

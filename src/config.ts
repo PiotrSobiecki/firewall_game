@@ -152,6 +152,9 @@ export const BTTF = {
     rearFlameOffset: { x: 38, y: -24 },
     /** Kurz z kół — y bliżej osi kół (mniej = wyżej). */
     wheelSmokeOffset: { x: 30, y: -6 },
+    /** Strefa „zbicia” auta statkiem (px od środka sprite’a). */
+    catchPadX: 58,
+    catchPadY: 72,
   },
 } as const;
 
