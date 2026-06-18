@@ -1,12 +1,14 @@
 import Phaser from "phaser";
 import {
   COLOR_HEX,
+  COLORS,
   GAME_WIDTH,
   GAME_HEIGHT,
   MUSIC_URL,
   LEADERBOARD_SIZE,
   BTTF,
 } from "../config";
+import { TEXTURE } from "../art/SpriteTextures";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import {
   findPlayerIndex,
@@ -33,8 +35,8 @@ const TITLES: Record<EndData["reason"], { text: string; color: string }> = {
 
 const RANKING_TOP_Y = 150;
 /** Przyciski nad zachodzącym słońcem (horyzont w BTTF.sunYRatio). */
-const END_BTN_PRESAVE_Y = GAME_HEIGHT * BTTF.sunYRatio - 118;
-const END_BTN_RETRY_Y = GAME_HEIGHT * BTTF.sunYRatio - 62;
+const END_BTN_PRESAVE_Y = GAME_HEIGHT * BTTF.sunYRatio - 142;
+const END_BTN_RETRY_Y = GAME_HEIGHT * BTTF.sunYRatio - 86;
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
@@ -100,7 +102,93 @@ export class EndScene extends Phaser.Scene {
     );
     retry.on("pointerdown", () => this.scene.start("GameScene"));
 
+    this.showResultHero(data.reason);
+
     void this.loadRanking({ name: "", ...data });
+  }
+
+  /** Bohaterka win/lose — ta sama pozycja co na menu + chmurka z napisem. */
+  private showResultHero(reason: EndData["reason"]): void {
+    const { scale, xRatio, yRatio, depth } = BTTF.menuHero;
+    const x = GAME_WIDTH * xRatio;
+    const y = GAME_HEIGHT * yRatio;
+    const won = reason === "win";
+
+    const hero = this.add
+      .image(x, y, won ? TEXTURE.endWin : TEXTURE.endLose)
+      .setOrigin(0.5, 1)
+      .setScale(scale)
+      .setDepth(depth);
+
+    const caption = won ? "Firewall działa!" : "Następnym razem!";
+    const accent = won ? COLOR_HEX.green : COLOR_HEX.magenta;
+
+    const heroTop = y - hero.displayHeight;
+    const bubbleX = x + hero.displayWidth * 0.52;
+    const bubbleY = heroTop + 2;
+
+    this.addSpeechBubble(bubbleX, bubbleY, caption, accent, depth + 1);
+  }
+
+  private addSpeechBubble(
+    x: number,
+    y: number,
+    text: string,
+    accent: string,
+    depth: number,
+  ): Phaser.GameObjects.Container {
+    const padX = 12;
+    const padY = 8;
+    const label = this.add
+      .text(0, 0, text, {
+        fontFamily: "monospace",
+        fontSize: "15px",
+        fontStyle: "bold",
+        color: "#ffffff",
+        align: "center",
+      })
+      .setOrigin(0.5);
+
+    const w = Math.ceil(label.width + padX * 2);
+    const h = Math.ceil(label.height + padY * 2);
+    const r = 6;
+    const left = -w / 2;
+    const top = -h / 2;
+
+    const bubbleBottom = top + h;
+    const tailLeft = left + 14;
+    const tailRight = left + 28;
+    const tailTipX = tailLeft - 10;
+    const tailTipY = bubbleBottom + 9;
+
+    const gfx = this.add.graphics();
+    const fill = 0x122033;
+
+    gfx.fillStyle(fill, 0.96);
+    gfx.fillRoundedRect(left, top, w, h, r);
+    gfx.fillTriangle(tailLeft, bubbleBottom, tailRight, bubbleBottom, tailTipX, tailTipY);
+
+    gfx.lineStyle(2, COLORS.cyan, 1);
+    gfx.strokeRoundedRect(left, top, w, h, r);
+    gfx.beginPath();
+    gfx.moveTo(tailLeft, bubbleBottom);
+    gfx.lineTo(tailTipX, tailTipY);
+    gfx.lineTo(tailRight, bubbleBottom);
+    gfx.strokePath();
+
+    gfx.lineStyle(3, fill, 0.96);
+    gfx.beginPath();
+    gfx.moveTo(tailLeft + 1, bubbleBottom);
+    gfx.lineTo(tailRight - 1, bubbleBottom);
+    gfx.strokePath();
+
+    gfx.lineStyle(1, Phaser.Display.Color.HexStringToColor(accent).color, 0.55);
+    gfx.strokeRoundedRect(left + 2, top + 2, w - 4, h - 4, r - 1);
+
+    label.setColor(accent);
+
+    const bubble = this.add.container(x, y, [gfx, label]).setDepth(depth);
+    return bubble;
   }
 
   /** Pobiera ranking, ew. pyta o imię i zapisuje wynik. Offline → komunikat. */

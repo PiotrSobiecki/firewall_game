@@ -23,6 +23,8 @@ export const TEXTURE = {
   menuHeroWalk2: "menu_hero_walk_2",
   menuHeroWalk3: "menu_hero_walk_3",
   menuHeroWalk4: "menu_hero_walk_4",
+  endWin: "end_win",
+  endLose: "end_lose",
   pilotFace: "pilot_face",
 } as const;
 
