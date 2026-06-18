@@ -3,6 +3,7 @@ import {
   COLOR_HEX,
   COLORS,
   BOSS,
+  BTTF,
   WIN_SCORE_AFTER_MINI_BOSS,
   GAME_WIDTH,
   GAME_HEIGHT,
@@ -276,10 +277,11 @@ export class HUD {
     });
   }
 
-  /** Easter egg: trafienie DeLoreana w trakcie przejazdu. */
+  /** Komunikat po trafieniu DeLoreana (punkty z flybyBonus). */
   flashDeloreanCatch(): void {
+    const pts = BTTF.flybyBonus;
     const t = this.scene.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, "GREAT SCOTT!\n88 MPH · +88", {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.48, `TRAFIONY DELOREAN!\n+${pts} pkt`, {
         fontFamily: "monospace",
         fontSize: "22px",
         color: COLOR_HEX.yellow,

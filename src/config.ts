@@ -135,7 +135,7 @@ export const BTTF = {
   /** Odstęp między kolejnymi przejazdami (gdy poprzedni zniknął z ekranu). */
   flybyIntervalMs: { min: 14_000, max: 32_000 },
   flybySpeed: 300,
-  flybyBonus: 88,
+  flybyBonus: 150,
   /** Na perspektywicznej „drodze” u dołu ekranu (nie w powietrzu). */
   flybyYRatio: 0.9,
   /** Pauza między przejazdami na ekranie startowym. */
