@@ -41,8 +41,18 @@ export class MenuHeroAnimator {
   private keySpace?: Phaser.Input.Keyboard.Key;
   private lastShieldFlashAt = 0;
   private rippleTimer?: Phaser.Time.TimerEvent;
+  private touchPointerId = -1;
+  private touchDir = 0;
+  private readonly scene: Phaser.Scene;
+
+  /** Strefa przycisku START — nie przechwytuj dotyku do chodzenia. */
+  private static readonly START_BLOCK_W = 140;
+  private static readonly START_BLOCK_H = 44;
+  private static readonly WALK_ZONE_Y_MIN = GAME_HEIGHT * 0.48;
+  private static readonly TOUCH_DEADZONE = 14;
 
   constructor(scene: Phaser.Scene) {
+    this.scene = scene;
     const {
       scale,
       xRatio,
@@ -95,13 +105,83 @@ export class MenuHeroAnimator {
 
     this.startIdleMotion(scene);
     this.startShieldAura(scene);
+    this.setupTouch(scene);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy());
+  }
+
+  /** Dotyk: palec po drodze = chodzenie, stuk w postać = tarcza. */
+  private setupTouch(scene: Phaser.Scene): void {
+    if (!scene.sys.game.device.input.touch) return;
+    scene.input.on("pointerdown", this.onTouchStart, this);
+    scene.input.on("pointermove", this.onTouchMove, this);
+    scene.input.on("pointerup", this.onTouchEnd, this);
+    scene.input.on("pointerupoutside", this.onTouchEnd, this);
+  }
+
+  private onTouchStart(p: Phaser.Input.Pointer): void {
+    if (this.isTapOnHero(p)) {
+      this.triggerShieldFlash();
+      return;
+    }
+    if (!this.isWalkTouchZone(p)) return;
+    this.touchPointerId = p.id;
+    this.setTouchDir(p);
+  }
+
+  private onTouchMove(p: Phaser.Input.Pointer): void {
+    if (p.id !== this.touchPointerId) return;
+    this.setTouchDir(p);
+  }
+
+  private onTouchEnd(p: Phaser.Input.Pointer): void {
+    if (p.id !== this.touchPointerId) return;
+    this.touchPointerId = -1;
+    this.touchDir = 0;
+  }
+
+  private setTouchDir(p: Phaser.Input.Pointer): void {
+    const dx = p.x - this.xPos;
+    this.touchDir =
+      Math.abs(dx) < MenuHeroAnimator.TOUCH_DEADZONE ? 0 : Math.sign(dx);
+  }
+
+  private isWalkTouchZone(p: Phaser.Input.Pointer): boolean {
+    if (p.y < MenuHeroAnimator.WALK_ZONE_Y_MIN) return false;
+    const startY = GAME_HEIGHT * 0.55;
+    const cx = GAME_WIDTH / 2;
+    if (
+      Math.abs(p.x - cx) < MenuHeroAnimator.START_BLOCK_W / 2 &&
+      Math.abs(p.y - startY) < MenuHeroAnimator.START_BLOCK_H / 2
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  private isTapOnHero(p: Phaser.Input.Pointer): boolean {
+    const b = this.container.getBounds();
+    return Phaser.Geom.Rectangle.Contains(
+      Phaser.Geom.Rectangle.Inflate(b, 24, 16),
+      p.x,
+      p.y,
+    );
+  }
+
+  private teardownTouch(): void {
+    this.scene.input.off("pointerdown", this.onTouchStart, this);
+    this.scene.input.off("pointermove", this.onTouchMove, this);
+    this.scene.input.off("pointerup", this.onTouchEnd, this);
+    this.scene.input.off("pointerupoutside", this.onTouchEnd, this);
   }
 
   update(dtSec: number): void {
     let dir = 0;
-    if (this.cursors?.left.isDown || this.keyA?.isDown) dir -= 1;
-    if (this.cursors?.right.isDown || this.keyD?.isDown) dir += 1;
+    if (this.touchPointerId >= 0) {
+      dir = this.touchDir;
+    } else {
+      if (this.cursors?.left.isDown || this.keyA?.isDown) dir -= 1;
+      if (this.cursors?.right.isDown || this.keyD?.isDown) dir += 1;
+    }
 
     if (dir !== 0) this.faceDir = dir;
 
@@ -427,6 +507,7 @@ export class MenuHeroAnimator {
   }
 
   destroy(): void {
+    this.teardownTouch();
     this.stopIdleMotion(true);
     this.rippleTimer?.remove();
   }
