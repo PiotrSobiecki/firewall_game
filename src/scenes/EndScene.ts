@@ -5,6 +5,7 @@ import {
   GAME_HEIGHT,
   MUSIC_URL,
   LEADERBOARD_SIZE,
+  BTTF,
 } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import {
@@ -31,6 +32,9 @@ const TITLES: Record<EndData["reason"], { text: string; color: string }> = {
 };
 
 const RANKING_TOP_Y = 150;
+/** Przyciski nad zachodzącym słońcem (horyzont w BTTF.sunYRatio). */
+const END_BTN_PRESAVE_Y = GAME_HEIGHT * BTTF.sunYRatio - 118;
+const END_BTN_RETRY_Y = GAME_HEIGHT * BTTF.sunYRatio - 62;
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
@@ -81,7 +85,7 @@ export class EndScene extends Phaser.Scene {
 
     // przyciski (klik zawsze; Enter dopiero gdy nie ma już pola na imię)
     const musicBtn = this.makeButton(
-      GAME_HEIGHT - 150,
+      END_BTN_PRESAVE_Y,
       "▶ ZAPISZ SIĘ NA PRE-SAVE FIREWALL",
       COLOR_HEX.yellow,
     );
@@ -90,7 +94,7 @@ export class EndScene extends Phaser.Scene {
     );
 
     const retry = this.makeButton(
-      GAME_HEIGHT - 94,
+      END_BTN_RETRY_Y,
       "↻ ZAGRAJ JESZCZE RAZ",
       COLOR_HEX.green,
     );
@@ -279,7 +283,8 @@ export class EndScene extends Phaser.Scene {
         padding: { x: 14, y: 8 },
       })
       .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setDepth(10);
   }
 
   update(_time: number, delta: number): void {
