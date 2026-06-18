@@ -140,6 +140,12 @@ export const BTTF = {
   flybyYRatio: 0.9,
   /** Pauza między przejazdami na ekranie startowym. */
   menuDriveBetweenMs: { min: 2_000, max: 5_500 },
+  /** Bohaterka na ekranie startowym (`public/menu_hero.png`). */
+  menuHero: {
+    scale: 0.36,
+    xRatio: 0.22,
+    yRatio: 0.57,
+  },
   /** Pixel-art DeLoreana z `public/delorean.png`. */
   delorean: {
     displayScale: 0.2,

@@ -18,6 +18,7 @@ export const TEXTURE = {
   particle: "particle",
   smoke: "particle_smoke",
   delorean: "delorean",
+  menuHero: "menu_hero",
 } as const;
 
 export const SPRITE = {
