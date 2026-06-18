@@ -7,16 +7,17 @@ export type DeloreanFlybyHooks = {
   onCollect: () => void;
 };
 
+const CATCH_RADIUS = 44;
+
 /**
  * Easter egg: DeLorean przejeżdża po dolnej „drodze”.
- * Kilka przejazdów na rundę; trafienie statkiem daje +88 pkt za każdy.
+ * Bez fizyki Arcade — ruch + dystans do gracza (brak wycieku colliderów).
  */
 export class DeloreanFlyby {
   private nextTriggerAtMs: number;
   private active = false;
   private caughtThisCar = false;
   private pass?: DeloreanPass;
-  private lastElapsedMs = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -25,23 +26,37 @@ export class DeloreanFlyby {
   ) {
     const { min, max } = BTTF.flybyFirstMs;
     this.nextTriggerAtMs = Phaser.Math.Between(min, max);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.destroy());
   }
 
   update(elapsedMs: number, ended: boolean): void {
     if (ended) return;
-    this.lastElapsedMs = elapsedMs;
 
     if (!this.active && elapsedMs >= this.nextTriggerAtMs) {
       this.spawn();
       return;
     }
 
-    if (this.pass?.car.active) {
-      const { car, dir } = this.pass;
-      const off =
-        (dir === 1 && car.x > GAME_WIDTH + 120) || (dir === -1 && car.x < -120);
-      if (off) this.finishPass(elapsedMs);
+    if (!this.pass?.car.active) return;
+
+    const dt = this.scene.game.loop.delta / 1000;
+    const { car, dir } = this.pass;
+    car.x += dir * BTTF.flybySpeed * dt;
+
+    if (!this.caughtThisCar) {
+      const dx = car.x - this.player.x;
+      const dy = car.y - this.player.y;
+      if (dx * dx + dy * dy <= CATCH_RADIUS * CATCH_RADIUS) {
+        this.caughtThisCar = true;
+        this.hooks.onCollect();
+        this.finishPass(elapsedMs);
+        return;
+      }
     }
+
+    const off =
+      (dir === 1 && car.x > GAME_WIDTH + 120) || (dir === -1 && car.x < -120);
+    if (off) this.finishPass(elapsedMs);
   }
 
   private scheduleNext(fromMs: number): void {
@@ -53,22 +68,7 @@ export class DeloreanFlyby {
     this.active = true;
     this.caughtThisCar = false;
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
-    const visual = spawnDeloreanPass(this.scene, dir, 6);
-    const car = this.scene.physics.add.existing(visual.car) as Phaser.Physics.Arcade.Image;
-    const { hitW, hitH, hitOffsetX, hitOffsetY, displayScale } = BTTF.delorean;
-    const body = car.body as Phaser.Physics.Arcade.Body;
-    body
-      .setSize(hitW * displayScale, hitH * displayScale)
-      .setOffset(hitOffsetX * displayScale, hitOffsetY * displayScale);
-    car.setVelocity(dir * BTTF.flybySpeed, 0);
-    this.pass = { ...visual, car };
-
-    this.scene.physics.add.overlap(this.player, car, () => {
-      if (this.caughtThisCar) return;
-      this.caughtThisCar = true;
-      this.hooks.onCollect();
-      this.finishPass(this.lastElapsedMs);
-    });
+    this.pass = spawnDeloreanPass(this.scene, dir, 6, { lite: true });
   }
 
   private finishPass(elapsedMs: number): void {
@@ -88,5 +88,4 @@ export class DeloreanFlyby {
   }
 }
 
-// re-export dla wygody importów w scenach
 export { DeloreanMenuDrive } from "./DeloreanDrive";
