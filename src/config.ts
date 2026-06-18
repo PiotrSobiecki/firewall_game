@@ -126,6 +126,17 @@ export const BTTF = {
     cactus: 0x143828,
     cactusHi: 0x1f5c36,
   },
+  /** Kaktusy w parallaxie przy drodze (menu, gra, EndScene). */
+  cactus: {
+    scrollSpeed: 32,
+    period: 220,
+    /** Odstęp od krawędzi ekranu — im mniej, tym dalej od środka drogi. */
+    edgeInset: 4,
+    /** Jak bardzo „zjeżdżają” w stronę drogi podczas scrolla (mniej = dalej na uboczu). */
+    roadDrift: 0.065,
+    /** Co ile px w cyklu pojawia się kolejny kaktus (mniej = gęściej). */
+    spacing: 24,
+  },
   /** Linia horyzontu (ułamek wysokości ekranu, od góry). Środek słońca leży na niej. */
   sunYRatio: 0.8,
   /** Słońce lekko na lewo od środka ekranu. */
@@ -140,11 +151,36 @@ export const BTTF = {
   flybyYRatio: 0.9,
   /** Pauza między przejazdami na ekranie startowym. */
   menuDriveBetweenMs: { min: 2_000, max: 5_500 },
-  /** Bohaterka na ekranie startowym (`public/menu_hero.png`). */
+  /** Bohaterka na ekranie startowym (`public/menu_hero.png`) — przy lewej krawędzi drogi, obok kaktusów. */
   menuHero: {
-    scale: 0.36,
-    xRatio: 0.22,
-    yRatio: 0.57,
+    scale: 0.3,
+    xRatio: 0.15,
+    yRatio: 0.992,
+    /** Nad DeLoreanem na menu (auto = menuDeloreanDepth). */
+    depth: 5,
+    /** Środek aury tarczy na prawej pięści (px tekstury, anchor postaci 0.5/1). */
+    shieldOffset: { x: 100, y: -390 },
+    /** Promień aury w px tekstury (skaluje się z postacią). */
+    shieldRadius: 58,
+  },
+  /** Warstwa przejazdu DeLoreana na menu i EndScene. */
+  menuDeloreanDepth: 3,
+  /**
+   * Twarz pilotki w okienku kokpitu (`public/pilot_face.png`).
+   * Offset od środka statku (0,0) w px tekstury 80×80.
+   */
+  playerPilot: {
+    localX: 0,
+    localY: -14,
+    scale: 0.068,
+    angle: 0,
+    windowHalfW: 11,
+    windowHalfH: 13,
+  },
+  /** Animowane ognie silnika statku gracza (offset od środka sprite’a 80×80). */
+  playerEngine: {
+    nozzleY: 36,
+    nozzleX: 9,
   },
   /** Pixel-art DeLoreana z `public/delorean.png`. */
   delorean: {
@@ -168,7 +204,7 @@ export const BTTF = {
 export const PLAYER = {
   speed: 300,
   zoneTop: GAME_HEIGHT * 0.35, // ruch w dolnych ~65% ekranu
-  bodyRadius: 16,
+  bodyRadius: 18,
   maxHp: 100, // HP jednego życia (PRD #17)
   iframesMs: 900, // nietykalność po trafieniu, by nie tracić HP co klatkę
   respawnIframesMs: 1500, // dłuższa nietykalność po respawnie (PRD ~1.5 s)

@@ -10,6 +10,23 @@ interface CactusPlacement {
   scale: number;
 }
 
+const CACTUS_KINDS: CactusKind[] = ["saguaro", "barrel", "saguaroShort", "saguaro", "barrel", "saguaroShort"];
+
+function buildCactusPlacements(): CactusPlacement[] {
+  const { period, spacing } = BTTF.cactus;
+  const out: CactusPlacement[] = [];
+  for (let offset = 0; offset < period; offset += spacing) {
+    const i = out.length;
+    out.push({
+      side: i % 2 === 0 ? "left" : "right",
+      offset,
+      kind: CACTUS_KINDS[i % CACTUS_KINDS.length],
+      scale: 0.8 + (i % 4) * 0.08,
+    });
+  }
+  return out;
+}
+
 /**
  * Animowana siatka neon + zachód słońca + pustynne kaktusy przy drodze.
  */
@@ -21,19 +38,11 @@ export class RetroGridBackground {
   private cactusScroll = 0;
   private readonly spacing = 40;
   private readonly scrollSpeed = 60; // px/s
-  private readonly cactusScrollSpeed = 32; // px/s — wolny parallax przy drodze
-  private readonly cactusPeriod = 300;
+  private readonly cactusScrollSpeed = BTTF.cactus.scrollSpeed;
+  private readonly cactusPeriod = BTTF.cactus.period;
+  private readonly cactusPlacements = buildCactusPlacements();
   private readonly horizonY = GAME_HEIGHT * BTTF.sunYRatio;
   private readonly sunX = GAME_WIDTH * BTTF.sunXRatio;
-  private readonly cactusPlacements: CactusPlacement[] = [
-    { side: "left", offset: 0, kind: "saguaro", scale: 1 },
-    { side: "left", offset: 95, kind: "barrel", scale: 0.95 },
-    { side: "right", offset: 45, kind: "saguaroShort", scale: 0.88 },
-    { side: "right", offset: 140, kind: "saguaro", scale: 1.05 },
-    { side: "left", offset: 200, kind: "saguaroShort", scale: 0.82 },
-    { side: "right", offset: 245, kind: "barrel", scale: 1.1 },
-    { side: "left", offset: 270, kind: "barrel", scale: 0.9 },
-  ];
 
   constructor(private scene: Phaser.Scene) {
     scene.add
@@ -84,15 +93,17 @@ export class RetroGridBackground {
     g.clear();
     const groundY = GAME_HEIGHT - 5;
     const scroll = this.cactusScroll % this.cactusPeriod;
+    const { edgeInset, roadDrift } = BTTF.cactus;
+    const cull = 18;
 
     for (const p of this.cactusPlacements) {
-      let travel = (p.offset - scroll + this.cactusPeriod) % this.cactusPeriod;
+      const travel = (p.offset - scroll + this.cactusPeriod) % this.cactusPeriod;
       const x =
         p.side === "left"
-          ? 16 + travel * 0.24
-          : GAME_WIDTH - 16 - travel * 0.24;
-      if (x < 8 || x > GAME_WIDTH - 8) continue;
-      if (travel > this.cactusPeriod - 24) continue;
+          ? edgeInset + travel * roadDrift
+          : GAME_WIDTH - edgeInset - travel * roadDrift;
+      if (x < 4 || x > GAME_WIDTH - 4) continue;
+      if (travel > this.cactusPeriod - cull) continue;
       this.drawCactus(g, x, groundY, p.kind, p.scale);
     }
   }
@@ -127,10 +138,8 @@ export class RetroGridBackground {
     g.fillStyle(fill, 0.92);
     g.fillRoundedRect(x - w / 2, groundY - h, w, h, 4);
     if (!short) {
-      // ramię lewe
       g.fillRoundedRect(x - w * 1.9, groundY - h * 0.62, w * 0.85, h * 0.22, 3);
       g.fillRoundedRect(x - w * 1.9, groundY - h * 0.78, w * 0.85, h * 0.2, 3);
-      // ramię prawe
       g.fillRoundedRect(x + w * 0.55, groundY - h * 0.48, w * 0.85, h * 0.2, 3);
       g.fillRoundedRect(x + w * 0.55, groundY - h * 0.64, w * 0.85, h * 0.18, 3);
     }
@@ -169,10 +178,8 @@ export class RetroGridBackground {
       g.fillStyle(b.color, b.alpha);
       g.fillRect(0, b.y, GAME_WIDTH, b.h);
     }
-    // ciemniejszy pas „ziemi” przy krawędzi drogi
     g.fillStyle(0x8a4a18, 0.22);
     g.fillRect(0, hy + 8, GAME_WIDTH, GAME_HEIGHT - hy - 8);
-    // słońce zachodzące: połowa nad horyzontem, reszta „za” linią ziemi
     this.fillSunArc(g, sx, hy, 52, 0xffcc66, 0.2);
     this.fillSunArc(g, sx, hy, 36, 0xffe0a0, 0.38);
   }

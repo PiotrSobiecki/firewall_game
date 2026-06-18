@@ -26,7 +26,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
-    registerGameTextures(this);
+    try {
+      registerGameTextures(this);
+    } catch (err) {
+      console.error("[BootScene] Nie udało się wygenerować tekstur:", err);
+    }
     this.scene.start("MenuScene");
   }
 }

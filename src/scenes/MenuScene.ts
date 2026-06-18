@@ -1,11 +1,11 @@
 import Phaser from "phaser";
-import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT, BTTF } from "../config";
-import { TEXTURE } from "../art/SpriteTextures";
+import { COLOR_HEX, GAME_WIDTH, GAME_HEIGHT } from "../config";
 import { RetroGridBackground } from "../ui/RetroGridBackground";
 import { topName, topEntries, type RunResult } from "../systems/ranking";
 import { fetchTopScores } from "../systems/scoreApi";
 import { MusicController } from "../systems/MusicController";
 import { DeloreanMenuDrive } from "../systems/DeloreanDrive";
+import { MenuHeroAnimator } from "../ui/MenuHeroAnimator";
 
 /** mm:ss z milisekund. */
 function formatTime(ms: number): string {
@@ -32,7 +32,7 @@ export class MenuScene extends Phaser.Scene {
     this.deloreanDrive = new DeloreanMenuDrive(this);
     this.marquee = undefined;
 
-    this.addMenuHero();
+    new MenuHeroAnimator(this);
 
     this.highText = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.32 + 78, "TOP DEFENDER: —", {
@@ -89,22 +89,6 @@ export class MenuScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown-M", () => this.music.toggle());
 
     void this.loadRanking();
-  }
-
-  /** Postać z teledysku — po lewej, nad drogą (pod tytułem). */
-  private addMenuHero(): void {
-    const { scale, xRatio, yRatio } = BTTF.menuHero;
-    const y = GAME_HEIGHT * yRatio;
-    const hero = this.add.image(GAME_WIDTH * xRatio, y, TEXTURE.menuHero);
-    hero.setScale(scale).setOrigin(0.5, 1).setDepth(1);
-    this.tweens.add({
-      targets: hero,
-      y: y - 5,
-      duration: 1400,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
   }
 
   /** Pobiera globalny ranking: aktualizuje HIGH SCORE i buduje przewijany pasek. */

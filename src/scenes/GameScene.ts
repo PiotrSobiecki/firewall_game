@@ -232,7 +232,7 @@ export class GameScene extends Phaser.Scene {
   /** Strzał gracza — wyłącznie w trybie PacketStream (auto-fire w górę). */
   private firePlayerShot(): void {
     const x = this.player.x;
-    const y = this.player.y - 26;
+    const y = this.player.y - 34;
     const shot = this.playerBullets.get(x, y, TEXTURE.playerBullet) as Phaser.Physics.Arcade.Image | null;
     if (!shot) return;
     shot.enableBody(true, x, y, true, true);

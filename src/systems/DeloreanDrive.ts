@@ -116,7 +116,7 @@ export class DeloreanMenuDrive {
 
   private startPass(): void {
     const dir: 1 | -1 = Math.random() < 0.5 ? 1 : -1;
-    this.pass = spawnDeloreanPass(this.scene, dir, 3);
+    this.pass = spawnDeloreanPass(this.scene, dir, BTTF.menuDeloreanDepth);
   }
 
   private endPass(): void {

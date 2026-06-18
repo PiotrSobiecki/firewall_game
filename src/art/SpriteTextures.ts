@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS } from "../config";
+import { BTTF, COLORS } from "../config";
 
 /** Klucze tekstur generowanych w BootScene. */
 export const TEXTURE = {
@@ -19,10 +19,11 @@ export const TEXTURE = {
   smoke: "particle_smoke",
   delorean: "delorean",
   menuHero: "menu_hero",
+  pilotFace: "pilot_face",
 } as const;
 
 export const SPRITE = {
-  player: { w: 56, h: 56 },
+  player: { w: 80, h: 80 },
   virus: { w: 32, h: 32 },
   trojan: { w: 44, h: 44 },
   worm: { w: 36, h: 36 },
@@ -35,14 +36,12 @@ export const SPRITE = {
   smoke: { w: 12, h: 12 },
 } as const;
 
-const DARK = 0x1a2238;
-const SHIELD_FILL = 0x0d3d4a;
 const VIRUS_CORE = 0xcc0066;
 const VIRUS_EDGE = 0x660033;
 
 /**
  * Proceduralne sprite'y w stylu arcade cyber — bez zewnętrznych assetów.
- * Gracz = statek-tarcza (heraldyczna tarcza + kadłub), nie strzałka.
+ * Gracz = „flux interceptor” (kadłub inspirowany DeLoreanem / kapasytorem fluxu).
  * Virus = kolczasty blob malware z „złośliwymi” oczami.
  */
 export function registerGameTextures(scene: Phaser.Scene): void {
@@ -59,120 +58,136 @@ export function registerGameTextures(scene: Phaser.Scene): void {
   createSmokeParticleTexture(scene);
 }
 
-/** Heraldyczny kontur tarczy jako lista wierzchołków (Phaser 4: Vector2). */
-function shieldOutline(
-  cx: number,
-  topY: number,
-  halfW: number,
-  shoulderY: number,
-  hipY: number,
-  tipY: number,
-): Phaser.Math.Vector2[] {
-  return [
-    new Phaser.Math.Vector2(cx, topY),
-    new Phaser.Math.Vector2(cx + halfW, shoulderY),
-    new Phaser.Math.Vector2(cx + halfW * 0.85, hipY),
-    new Phaser.Math.Vector2(cx, tipY),
-    new Phaser.Math.Vector2(cx - halfW * 0.85, hipY),
-    new Phaser.Math.Vector2(cx - halfW, shoulderY),
-  ];
-}
-
-/** Świecący „płomień” firewall jako rdzeń statku (czytelny w skali ~14px). */
-function drawFirewallCore(
+/** Kapasytor fluxu — trzy świecące „beczki” w układzie Y (motyw BTTF). */
+function drawFluxCapacitor(
   g: Phaser.GameObjects.Graphics,
   cx: number,
   cy: number,
+  k: number,
 ): void {
-  // poświata
-  g.fillStyle(COLORS.green, 0.22);
-  g.fillCircle(cx, cy, 10);
+  const { fluxBlue } = BTTF.colors;
+  const tube = (x: number, y: number, r: number) => {
+    g.fillStyle(fluxBlue, 0.2);
+    g.fillCircle(x, y, r + 3 * k);
+    g.fillStyle(0x0a2840, 1);
+    g.fillCircle(x, y, r);
+    g.lineStyle(1.5 * k, fluxBlue, 1);
+    g.strokeCircle(x, y, r);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillCircle(x, y - r * 0.25, r * 0.35);
+  };
+  tube(cx, cy - 7 * k, 4.2 * k);
+  tube(cx - 7 * k, cy + 5 * k, 3.6 * k);
+  tube(cx + 7 * k, cy + 5 * k, 3.6 * k);
+  g.lineStyle(1 * k, fluxBlue, 0.75);
+  g.lineBetween(cx, cy - 3 * k, cx - 5 * k, cy + 2 * k);
+  g.lineBetween(cx, cy - 3 * k, cx + 5 * k, cy + 2 * k);
+  g.lineBetween(cx - 5 * k, cy + 2 * k, cx + 5 * k, cy + 2 * k);
+}
 
-  // sześciokątny rdzeń (energetyczny zamek), ciemne tło pod symbol
-  const hex: Phaser.Math.Vector2[] = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (Math.PI / 3) * i - Math.PI / 2;
-    hex.push(new Phaser.Math.Vector2(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8));
-  }
-  g.fillStyle(0x06241c, 1);
-  g.fillPoints(hex, true, true);
-  g.lineStyle(1.5, COLORS.green, 1);
-  g.strokePoints(hex, true, true);
+/** Kadłub statku bez szyby — szyba i głowa pilotki doklejane osobno. */
+function drawPlayerShipHull(g: Phaser.GameObjects.Graphics, w: number, h: number): void {
+  const k = w / 56;
+  const cx = w / 2;
+  const { deloreanSilver, deloreanDark, fluxBlue, flameOrange, flameRed } = BTTF.colors;
 
-  // stylizowany płomień (trzy języki) — symbol „firewall”
-  g.fillStyle(COLORS.green, 1);
-  g.fillTriangle(cx, cy - 6, cx - 4, cy + 4, cx + 4, cy + 4); // główny język
-  g.fillStyle(COLORS.yellow, 1);
-  g.fillTriangle(cx, cy - 2, cx - 2.4, cy + 4, cx + 2.4, cy + 4); // gorący rdzeń
-  g.fillStyle(0xffffff, 0.95);
-  g.fillTriangle(cx, cy + 0.5, cx - 1.1, cy + 4, cx + 1.1, cy + 4); // biały blik
+  g.fillStyle(fluxBlue, 0.14);
+  g.fillEllipse(cx, h - 5 * k, 28 * k, 14 * k);
+  g.fillStyle(flameOrange, 0.45);
+  g.fillEllipse(cx, h - 4 * k, 20 * k, 10 * k);
+  g.fillStyle(flameRed, 0.7);
+  g.fillEllipse(cx, h - 5 * k, 12 * k, 7 * k);
+  g.fillStyle(0xffffff, 0.9);
+  g.fillEllipse(cx, h - 6 * k, 5 * k, 4 * k);
+
+  const fin = (s: number) => {
+    const pts = [
+      new Phaser.Math.Vector2(cx + s * 9 * k, 28 * k),
+      new Phaser.Math.Vector2(cx + s * 25 * k, 34 * k),
+      new Phaser.Math.Vector2(cx + s * 23 * k, 44 * k),
+      new Phaser.Math.Vector2(cx + s * 11 * k, 42 * k),
+    ];
+    g.fillStyle(deloreanDark, 1);
+    g.fillPoints(pts, true, true);
+    g.lineStyle(1.5 * k, deloreanSilver, 0.95);
+    g.strokePoints(pts, true, true);
+    g.lineStyle(1 * k, fluxBlue, 0.45);
+    g.lineBetween(cx + s * 11 * k, 31 * k, cx + s * 21 * k, 36 * k);
+  };
+  fin(-1);
+  fin(1);
+
+  const hull = [
+    new Phaser.Math.Vector2(cx, 5 * k),
+    new Phaser.Math.Vector2(cx + 13 * k, 20 * k),
+    new Phaser.Math.Vector2(cx + 15 * k, 38 * k),
+    new Phaser.Math.Vector2(cx + 9 * k, 49 * k),
+    new Phaser.Math.Vector2(cx - 9 * k, 49 * k),
+    new Phaser.Math.Vector2(cx - 15 * k, 38 * k),
+    new Phaser.Math.Vector2(cx - 13 * k, 20 * k),
+  ];
+  g.fillStyle(deloreanDark, 1);
+  g.fillPoints(hull, true, true);
+  g.fillStyle(deloreanSilver, 1);
+  g.fillPoints(
+    [
+      new Phaser.Math.Vector2(cx, 7 * k),
+      new Phaser.Math.Vector2(cx + 11 * k, 21 * k),
+      new Phaser.Math.Vector2(cx + 12 * k, 36 * k),
+      new Phaser.Math.Vector2(cx + 7 * k, 46 * k),
+      new Phaser.Math.Vector2(cx - 7 * k, 46 * k),
+      new Phaser.Math.Vector2(cx - 12 * k, 36 * k),
+      new Phaser.Math.Vector2(cx - 11 * k, 21 * k),
+    ],
+    true,
+    true,
+  );
+
+  g.lineStyle(1.5 * k, deloreanDark, 0.85);
+  g.lineBetween(cx - 12 * k, 30 * k, cx + 12 * k, 30 * k);
+  g.lineStyle(1 * k, fluxBlue, 0.35);
+  g.lineBetween(cx - 10 * k, 32 * k, cx + 10 * k, 32 * k);
+
+  // wnętrze kokpitu — ciemne okienko pod twarz pilotki
+  g.fillStyle(0x060c14, 1);
+  g.fillRoundedRect(cx - 7 * k, 10 * k, 14 * k, 16 * k, 2 * k);
+  g.lineStyle(1.5 * k, deloreanSilver, 0.95);
+  g.strokeRoundedRect(cx - 7.5 * k, 9.5 * k, 15 * k, 17 * k, 2.5 * k);
+
+  g.fillStyle(0xcc1122, 0.95);
+  g.fillRoundedRect(cx - 11 * k, h - 14 * k, 5 * k, 3 * k, k);
+  g.fillRoundedRect(cx + 6 * k, h - 14 * k, 5 * k, 3 * k, k);
+
+  g.lineStyle(2 * k, deloreanSilver, 1);
+  g.strokePoints(hull, true, true);
+  g.lineStyle(1 * k, fluxBlue, 0.55);
+  g.strokePoints(hull, true, true);
+
+  drawFluxCapacitor(g, cx, 27 * k, k);
+}
+
+/** Szyba kokpitu — połysk na okienku u nosa statku. */
+function drawCockpitGlass(g: Phaser.GameObjects.Graphics, cx: number, k: number): void {
+  const { fluxBlue, deloreanSilver } = BTTF.colors;
+  g.fillStyle(fluxBlue, 0.14);
+  g.fillRoundedRect(cx - 6.5 * k, 10.5 * k, 13 * k, 14 * k, 2 * k);
+  g.fillStyle(0xffffff, 0.12);
+  g.fillRoundedRect(cx - 4 * k, 11 * k, 5 * k, 6 * k, 1 * k);
+  g.lineStyle(1 * k, deloreanSilver, 0.75);
+  g.strokeRoundedRect(cx - 7.5 * k, 9.5 * k, 15 * k, 17 * k, 2.5 * k);
 }
 
 function createPlayerTexture(scene: Phaser.Scene): void {
   const { w, h } = SPRITE.player;
+  const k = w / 56;
   const g = scene.make.graphics({ x: 0, y: 0 });
-  const cx = w / 2;
 
-  // --- Skrzydła / stabilizatory (za kadłubem, magenta) ---
-  // skośne panele myśliwca, zintegrowane przy „ramionach” tarczy
-  const wing = (s: number) => {
-    const pts = [
-      new Phaser.Math.Vector2(cx + s * 10, 20),
-      new Phaser.Math.Vector2(cx + s * 27, 27),
-      new Phaser.Math.Vector2(cx + s * 25, 35),
-      new Phaser.Math.Vector2(cx + s * 12, 38),
-    ];
-    g.fillStyle(0x2a0a22, 1);
-    g.fillPoints(pts, true, true);
-    g.lineStyle(2, COLORS.magenta, 0.95);
-    g.strokePoints(pts, true, true);
-    // świecąca krawędź natarcia
-    g.lineStyle(1, COLORS.magenta, 0.5);
-    g.lineBetween(cx + s * 12, 24, cx + s * 24, 29);
-  };
-  wing(-1);
-  wing(1);
+  drawPlayerShipHull(g, w, h);
+  drawCockpitGlass(g, w / 2, k);
 
-  // --- Silniki + poświata (dolny segment, pod tarczą) ---
-  g.fillStyle(COLORS.cyan, 0.16);
-  g.fillEllipse(cx, h - 4, 30, 12);
-  // obudowa dysz
-  g.fillStyle(DARK, 1);
-  g.fillRoundedRect(cx - 12, h - 16, 24, 11, 3);
-  g.lineStyle(2, COLORS.cyan, 0.9);
-  g.strokeRoundedRect(cx - 12, h - 16, 24, 11, 3);
-  // płomienie dysz (cyan→żółty→biały)
-  for (const ox of [-7, 7]) {
-    g.fillStyle(COLORS.yellow, 0.55);
-    g.fillEllipse(cx + ox, h - 4, 8, 8);
-    g.fillStyle(0xffffff, 0.9);
-    g.fillEllipse(cx + ox, h - 6, 3, 5);
+  if (scene.textures.exists(TEXTURE.player)) {
+    scene.textures.remove(TEXTURE.player);
   }
-
-  // --- Tarcza heraldyczna ---
-  const outline = shieldOutline(cx, 3, 21, 16, 35, 47);
-  // poświata konturu
-  g.lineStyle(5, COLORS.cyan, 0.18);
-  g.strokePoints(outline, true, true);
-  // korpus (gradient imitowany dwiema warstwami)
-  g.fillStyle(DARK, 1);
-  g.fillPoints(outline, true, true);
-  g.fillStyle(SHIELD_FILL, 0.9);
-  g.fillPoints(shieldOutline(cx, 7, 16, 18, 32, 42), true, true);
-  // wewnętrzny połysk (lewa górna połać)
-  g.fillStyle(COLORS.cyan, 0.14);
-  g.fillTriangle(cx, 9, cx, 34, cx - 14, 18);
-  // mocny kontur zewnętrzny
-  g.lineStyle(2.5, COLORS.cyan, 1);
-  g.strokePoints(outline, true, true);
-  // techniczne linie korpusu
-  g.lineStyle(1, COLORS.cyan, 0.35);
-  g.lineBetween(cx - 13, 22, cx + 13, 22);
-  g.lineBetween(cx, 36, cx, 44);
-
-  // --- Rdzeń firewall (świecący płomień w centrum) ---
-  drawFirewallCore(g, cx, 23);
-
   g.generateTexture(TEXTURE.player, w, h);
   g.destroy();
 }
@@ -454,17 +469,20 @@ function createBulletTexture(scene: Phaser.Scene): void {
   g.destroy();
 }
 
-/** Pocisk gracza (PacketStream) — świecący bełt cyan lecący w górę. */
+/** Pocisk gracza — smuga fluxu (niebieska poświata + pomarańczowy rdzeń). */
 function createPlayerBulletTexture(scene: Phaser.Scene): void {
   const { w, h } = SPRITE.playerBullet;
   const g = scene.make.graphics({ x: 0, y: 0 });
   const cx = w / 2;
-  g.fillStyle(COLORS.cyan, 0.3);
+  const { fluxBlue, flameOrange } = BTTF.colors;
+  g.fillStyle(fluxBlue, 0.35);
   g.fillEllipse(cx, h / 2, w, h);
-  g.fillStyle(COLORS.cyan, 1);
-  g.fillTriangle(cx, 1, w - 2, h - 3, 2, h - 3);
-  g.fillStyle(0xffffff, 0.9);
-  g.fillTriangle(cx, 3, cx + 2.5, h - 6, cx - 2.5, h - 6);
+  g.fillStyle(flameOrange, 0.85);
+  g.fillTriangle(cx, 0, cx + 3.5, h - 2, cx - 3.5, h - 2);
+  g.fillStyle(0xffffff, 0.95);
+  g.fillRect(cx - 1, 1, 2, h - 4);
+  g.fillStyle(fluxBlue, 0.6);
+  g.fillCircle(cx, h - 3, 2.5);
   g.generateTexture(TEXTURE.playerBullet, w, h);
   g.destroy();
 }
