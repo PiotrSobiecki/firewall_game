@@ -58,8 +58,8 @@ export const API_BASE =
     ? "http://localhost:8787"
     : "https://firewall-scores.piotr-sobiecki.workers.dev");
 
-/** Link do utworu „Firewall” (streaming — Feature.fm / Next Music). */
-export const MUSIC_URL = "https://nextmusic.ffm.to/firewall";
+/** Link do utworu „Firewall” (teledysk na YouTube). */
+export const MUSIC_URL = "https://www.youtube.com/watch?v=o1fLTgT8leM";
 
 /** @deprecated Użyj MUSIC_URL */
 export const YOUTUBE_URL = MUSIC_URL;

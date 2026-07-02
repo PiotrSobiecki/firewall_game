@@ -88,7 +88,7 @@ export class EndScene extends Phaser.Scene {
     // przyciski (klik zawsze; Enter dopiero gdy nie ma już pola na imię)
     const musicBtn = this.makeButton(
       END_BTN_PRESAVE_Y,
-      "▶ ZAPISZ SIĘ NA PRE-SAVE FIREWALL",
+      "▶ POSŁUCHAJ FIREWALL",
       COLOR_HEX.yellow,
     );
     musicBtn.on("pointerdown", () =>
